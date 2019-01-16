@@ -77,7 +77,14 @@ async function createKMSKey(){
  */
 async function createKeyStore(){
     try{
-        const result=await cfn.create('keystore', KEYSTORE_TEMPLATE, null, true);
+        var outputResults=await cfn.getOutputs('teemops-keystore');
+        var result;
+        if(outputResults!=null && outputResults[0].OutputKey=='BucketName'){
+            result=outputResults[0].OutputValue;
+        }else{
+            result=await cfn.create('keystore', KEYSTORE_TEMPLATE, null, true);
+        }
+        
         var s3Config=await file.getConfig('s3', DEFAULT_CONFIG_PATH);
         s3Config.key_store=result;
         const updateConfig=file.updateConfig('s3', s3Config, DEFAULT_CONFIG_PATH);

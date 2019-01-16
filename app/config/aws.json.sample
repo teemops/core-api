@@ -1,27 +1,80 @@
 {
+    "ExternalId": "cloudapi-1234",
+    "mysecrets": {
+        "secret": "WUV7687623HJBJHB87986&23",
+        "confirm_secret": "f6b25ea5278523febdd560825abd621"
+    },
+    "notifications": {
+        "smtp_host": "smtp.mailgun.org",
+        "smtp_user": "teemops@mail.teem.nz",
+        "smtp_pass": "Jbsd&8723b"
+    },
+    "ui_site": {
+        "base_url": "http://localhost:9000"
+    },
+    "features_enabled": [
+        {
+            "name": "core",
+            "plugin": ""
+        },
+        {
+            "name": "aws",
+            "plugin": "aws"
+        },
+        {
+            "name": "mq",
+            "plugin": "teem-sqs"
+        },
+        {
+            "name": "encryption",
+            "plugin": "teem-kms"
+        },
+        {
+            "name": "database",
+            "plugin": "teem-mysql"
+        },
+        {
+            "name": "mail",
+            "plugin": "teem-mail"
+        },
+        {
+            "name": "notifications",
+            "plugin": "teem-notify"
+        }
+    ],
+    "default_region": "us-west-2",
     "sqs": {
         "endpoint": "https://sqs.us-west-2.amazonaws.com",
         "region": "us-west-2",
-        "jobsq": "teem_jobs"
+        "jobsq": "teemops_main"
     },
     "s3": {
-        "app_bucket": "teemops-meta-beta",
+        "app_bucket": "cloudapi-dev-topsmetabucket-2s08qew2bvms",
         "app_path": "apps/vm/",
         "region": "us-west-2",
-        "endpoint": "https://s3-us-west-2.amazonaws.com"
+        "endpoint": "https://s3-us-west-2.amazonaws.com",
+        "key_store": "teemops-keystore-topskeystorebucket-9l7sxgadxh6r"
     },
-    "ec2":{
-        "region": "ap-southeast-2"
+    "cfn": {
+        "endpoint": "https://cloudformation.us-west-2.amazonaws.com"
     },
-    "s3meta":{
+    "kms": {
+        "endpoint": "https://kms.us-west-2.amazonaws.com",
+        "defaultKeyName": "alias/tops/teemops",
         "region": "us-west-2"
     },
-    "notify":{
-        "table": "topsnotify",
-        "region": "ap-southeast-2"
+    "ec2": {
+        "region": "us-west-2"
     },
-    "smq":{
-        "queues":[
+    "s3meta": {
+        "region": "us-west-2"
+    },
+    "notify": {
+        "table": "topsnotify",
+        "region": "us-west-2"
+    },
+    "smq": {
+        "queues": [
             {
                 "name": "vm",
                 "path": "apps/vm/",

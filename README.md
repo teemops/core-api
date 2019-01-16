@@ -1,6 +1,8 @@
 # Teemops Core API #
 Simplified AWS Operations
 
+Part of https://github.com/teemops/teemops
+
 Alpha code, not ready for release or maintenance.
 (Moved from private Bitbucket to Public GitHub)
 

@@ -11,7 +11,8 @@ function init (appConfig) {
     cfn = new AWS.CloudFormation({endpoint: ep, region: config.get("default_region")});
 
     return {
-        create: createStack
+        create: createStack,
+        getOutputs: getStackOutputs
     }
 }
 
@@ -76,6 +77,19 @@ async function createStack(label, template, parameters=null, wait=false){
     }
 }
 
+/**
+ * Gets list of outputs for a given stack name
+ * 
+ * @param {*} stackName Unique name of stack
+ * @returns {Output}
+ * Example:
+ * {
+ *  [
+ *      OutputKey: 'BucketName',
+ *      OutputValue: 'some-bucket-name-l7sxgadxh6r'
+ *  ],...
+ * }
+ */
 async function getStackOutputs(stackName){
     var params = {
         StackName: stackName
@@ -83,7 +97,9 @@ async function getStackOutputs(stackName){
     try{
         const describeStacks= await cfnTask('describeStacks', params);
         if(describeStacks.Stacks.length!=0){
-            return describeStacks.Stacks[0].Outputs[0].OutputValue;
+            return describeStacks.Stacks[0].Outputs;
+        }else{
+            return null;
         }
     }catch(e){
         throw e;
