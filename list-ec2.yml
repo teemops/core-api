@@ -1,0 +1,18 @@
+---
+
+#Lists ec2 servers "remote_facts" and outputs to a file
+#modify to use however you need
+- name: list all ec2 servers
+  hosts: localhost
+  become: false
+  connection: local
+  gather_facts: false
+  
+  tasks:
+    - ec2_remote_facts:
+        region: ap-southeast-2
+        filters:
+          instance-state-name: running
+      register: ec2_list
+    
+    - debug: var=ec2_list

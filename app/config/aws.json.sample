@@ -1,0 +1,37 @@
+{
+    "sqs": {
+        "endpoint": "https://sqs.us-west-2.amazonaws.com",
+        "region": "us-west-2",
+        "jobsq": "teem_jobs"
+    },
+    "s3": {
+        "app_bucket": "teemops-meta-beta",
+        "app_path": "apps/vm/",
+        "region": "us-west-2",
+        "endpoint": "https://s3-us-west-2.amazonaws.com"
+    },
+    "ec2":{
+        "region": "ap-southeast-2"
+    },
+    "s3meta":{
+        "region": "us-west-2"
+    },
+    "notify":{
+        "table": "topsnotify",
+        "region": "ap-southeast-2"
+    },
+    "smq":{
+        "queues":[
+            {
+                "name": "vm",
+                "path": "apps/vm/",
+                "Description": "MQ"
+            },
+            {
+                "name": "vmtags",
+                "path": "apps/vm/",
+                "Description": "MQ"
+            }
+        ]
+    }
+}

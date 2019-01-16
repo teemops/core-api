@@ -1,0 +1,27 @@
+List of features that we want.
+
+Backups
+-streamilne backups for EBS / Amazon DLM policies
+-S3 backups
+-Setup IAM roles for instance profiles
+
+Audit
+-setup auditing of networking, route tables, internet gateways, outbound security groups
+-audit patching quality
+
+Patch
+-patching of OS
+-SSM / Patch Manager
+
+For Cloud Ops what are the main features you would like to see automated?
+Ideas:
+Backups
+Security Configuration
+Auditing
+Patch Management
+ASG Management
+Spot Instance Management
+Best practice playbooks
+App deployments
+CI Pipelines
+Automated testing

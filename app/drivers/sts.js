@@ -1,0 +1,55 @@
+if (typeof Promise === 'undefined') {
+    var async = require('asyncawait/async');
+    var await = require('asyncawait/await');
+    var Promise = require('bluebird');
+}
+
+var  AWSSTS= require('aws-sdk');
+//globals
+var config, externalId;
+var sts= new AWSSTS.STS();
+
+const sessionName="Teemops_core_api";
+
+function init(appConfig){
+    config=appConfig;
+    externalId=config.get("ExternalId");
+
+    return {
+        assume: stsAssume
+    }
+}
+
+async function stsAssume(event) {
+    console.log("RoleARN: "+event.RoleArn);
+    var params={
+      DurationSeconds: 900,
+      RoleArn: event.RoleArn,
+      ExternalId: externalId,
+      RoleSessionName: sessionName
+    };
+    return new Promise(function(resolve, reject){
+        sts.assumeRole(params, function(err, data){
+            if (err) {
+              reject(err);
+            }else{
+              if (data.Credentials.length!==0) {
+                console.log("Credentials:"+ JSON.stringify(data.Credentials));
+                console.log("Region: "+event.region);
+                var creds={
+                  accessKeyId:data.Credentials.AccessKeyId,
+                  secretAccessKey:data.Credentials.SecretAccessKey,
+                  sessionToken:data.Credentials.SessionToken,
+                  region:event.region
+                };
+                resolve(creds);
+              }else{
+                reject("Error Assuming Role");
+              }
+            }  
+          });
+    })
+
+}
+
+module.exports=init;

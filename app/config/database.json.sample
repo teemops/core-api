@@ -1,0 +1,10 @@
+{
+    "mysql": {
+        "host": "localhost",
+        "db": "teem",
+        "user": "teemops",
+        "pass": "",
+        "query_timeout": 10000 
+    },
+    "key2": 500
+}
