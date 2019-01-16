@@ -24,8 +24,6 @@
     "uuid": "^3.0"
   },
   "devDependencies": {
-    "@types/mocha": "^5.2.5",
-    "@types/node": "^10.12.18",
     "eslint": "^5.8.0",
     "jasmine": "^2.6.0",
     "mocha": "^5.2.0",
