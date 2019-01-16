@@ -11,7 +11,7 @@ This contains the code for the following:
 
 # About and Background #
 Teemops was originally developed as a SaaS product, but after some thought and a few years of R&D the founder decided to 
-release the code as an open source project under the Creative Commons license.
+release the code as an open source project under the Creative Commons and GNUS licenses for different components.
 
 The reasons for this were many, but the main was to provide a free version to make it easier for IT Ops teams on AWS.
 
