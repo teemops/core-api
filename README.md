@@ -76,3 +76,9 @@ The following plugins are enabled by default:
 
 Plugin settings:
 These are in config.json.sample.
+
+### License and Copyright notices
+GNU General Public License v3.0
+
+### Support
+For any support related queries please email ben@teemops.com
