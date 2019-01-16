@@ -1,8 +1,9 @@
 var AWS = require('aws-sdk'); 
-const STATE_COMPLETED="CREATE_COMPLETE";
-var config, cfn;
 var awsTask=require("../../app/drivers/awsTask");
 var file=require("../../app/drivers/file");
+
+const STATE_COMPLETED="CREATE_COMPLETE";
+var config, cfn;
 
 function init (appConfig) {
     config=appConfig;
@@ -84,6 +85,8 @@ async function getStackOutputs(stackName){
         if(describeStacks.Stacks.length!=0){
             return describeStacks.Stacks[0].Outputs[0].OutputValue;
         }
+    }catch(e){
+        throw e;
     }
     
 }
