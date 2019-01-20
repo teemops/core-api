@@ -9,7 +9,6 @@ if (typeof Promise === 'undefined') {
     var Promise = require('bluebird');
 } 
 var appControlller = require("../../app/controllers/AppController.js");
-var userController = require("../../app/controllers/UserController.js");
 var jobController = require("../../app/controllers/JobController.js");
 var eventController = require("../../app/controllers/EventController.js");
 
@@ -19,7 +18,6 @@ var auth = require("../../app/utils/auth.js");
 
 var router = express.Router();
 var myApps=appControlller();
-var myUsers=userController();
 var myJobs=jobController();
 var myEvents = eventController();
 

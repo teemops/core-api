@@ -1,7 +1,7 @@
 # Teemops Core API #
 Simplified AWS Operations
 
-Part of https://github.com/teemops/teemops
+This is the API part of https://github.com/teemops/teemops
 
 Alpha code, not ready for release or maintenance.
 (Moved from private Bitbucket to Public GitHub)
@@ -9,7 +9,7 @@ Alpha code, not ready for release or maintenance.
 Feel free to look through the code or watch this repo.
 
 This contains the code for the following:
-- Node Express API
+* Node Express API
 
 # About and Background #
 Teemops was originally developed as a SaaS product, but after some thought and a few years of R&D the founder decided to 
@@ -18,12 +18,12 @@ release the code as an open source project under the Creative Commons and GNUS l
 The reasons for this were many, but the main was to provide a free version to make it easier for IT Ops teams on AWS.
 
 Examples of problems that Teemops wants to solve:
--Multi-account management
--Multi-region managemennt
--Faster launch configuration
--Centralised AMI management
--Centralised key management (EC2 Key Pairs)
--Automate a number of cumbersome tasks in AWS
+* Multi-account management
+* Multi-region managemennt
+* Faster launch configuration
+* Centralised AMI management
+* Centralised key management (EC2 Key Pairs)
+* Automate a number of cumbersome tasks in AWS
 
 ## Trello 
 
@@ -36,7 +36,7 @@ You can use Github issues to add issues. (Currently closed until initial release
 
 You can install nvm locally:
 # install nvm
-curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash
+curl -o- https://raw.githubusercontent.com/creationix/nvm/master/install.sh | bash
 
 # install node 8
 nvm install 8
@@ -50,13 +50,14 @@ If you have an older version of node > v4, this app will support it.
 
 ### Setup and configuration files
 You can run the installer, which will take care of everything and ensure you are running on the latest build.
- ./installer.sh
+See https://github.com/teemops/teemops
+
 TODO
 
 Rename following config files to correct names:
--config.json.sample >> config.json
--aws.json.sample >> aws.json
--database.json.sample >> database.json
+* config.json.sample >> config.json
+* aws.json.sample >> aws.json
+* database.json.sample >> database.json
 
 ### Running:
 * Dev
@@ -73,8 +74,8 @@ The concept of plugins is just an idea at the moment but would be default plugin
 
 If plugins exist in config file and in file system they are loaded by default. You can build your own custom plugins such as message queuing, database driver etc...
 The following plugins are enabled by default:
--SQS
--MySQL
+* SQS
+* MySQL
 
 Plugin settings:
 These are in config.json.sample.

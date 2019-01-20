@@ -17,6 +17,8 @@ var myJWT = jwtController();
 var router = express.Router();
 var cfg=configService();
 
+myemail.init(config);
+
 module.exports=function(){
     return {
         init:  function init () {
@@ -154,7 +156,7 @@ module.exports=function(){
 
             function sendConfirmEmail(results){
                 var subject="Please confirm your Teem Ops Registration";
-                var message="<p>Confirmation Link: "+cfg.item("ui_site", "base_url").base_url+"/confirm/"+confirmCode+"</p>";
+                var message="<p>Confirmation Link: "+cfg.item("ui_site", "base_url").base_url+"/#/public/confirm/"+confirmCode+"</p>";
 
                 myemail.sendEmail(
                     data.email, subject, message,

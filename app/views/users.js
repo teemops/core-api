@@ -10,6 +10,7 @@ if (typeof Promise === 'undefined') {
 var fs = Promise.promisifyAll(require('fs')); // adds Async() versions that return promises
 var router = express.Router();
 var myUser=userController();
+var config;
 
 //Body Parser required to use json and other body data sent in request
 //router.use(bodyParser.urlencoded({ extended: false }));
@@ -57,12 +58,13 @@ router.put('/', function(req, res) {
 });
 
 router.get('/confirm/:code?', function(req, res) {
-    myUser.confirmUser(req.params,
-    function (outputMessage){
-        console.log("ID Added for new user: "+outputMessage);
-        res.json({ status: outputMessage });
-    }
-  );
+    myUser.confirmUser(
+        req.params,
+        function (outputMessage){
+            console.log("ID Added for new user: "+outputMessage);
+            res.json({ status: outputMessage });
+        }
+    );
 });
 
 router.get('/check/:user?', function(req, res) {
@@ -116,11 +118,14 @@ router.get('/search/:q?', function(req, res) {
 router.post('/login', function(req, res) {
     myUser.loginUser(req.body,
     function (err, token){
-        if (err) { res.json({ err });  }
+        if (err) { 
+            res.json({ err });  
+        }else{
+            console.log("Login Result: "+token);
+            res.json( token );
+        }
 
-        console.log("Login Result: "+token);
-
-        res.json( token );
+        
     }
   );
 });

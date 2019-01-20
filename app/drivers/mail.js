@@ -1,27 +1,14 @@
 var nodemailer = require('nodemailer');
-var config = require('config-json');  
-switch(process.env.MODE){
-    case "prod":
-        config.load('./app/config/config.prod.json');
-        break;
-    case "test":
-        config.load('./app/config/config.test.json');
-        break;
-    case "dev":
-        config.load('./app/config/config.json');
-        break;
-    default:
-        config.load('./app/config/config.json');
-}
 
-var auth_host = config.get("notifications", "smtp_host");
-var auth_user = config.get("notifications", "smtp_user");
-var auth_pass = config.get("notifications", "smtp_pass");
+var config, auth_host, auth_user, auth_pass;
 
 module.exports=function(){
     return {
-        init:  function init () {
-            
+        init:  function init (appConfig) {
+            config=appConfig;
+            auth_host = config.get("notifications", "smtp_host");
+            auth_user = config.get("notifications", "smtp_user");
+            auth_pass = config.get("notifications", "smtp_pass");
         },
         /**
          * @author: Ben Fellows <ben@teemops.com>
