@@ -81,6 +81,7 @@ const update_config=async function(source_item, dest_item, source, dest){
     const updateConfig=await file.updateConfig(full_dest_item[0], currentValue, dest);
 
 }
+
 console.log('waiting...');
 /**
  * Updates the config file as follows:
@@ -97,6 +98,8 @@ setTimeout(function(){
             console.error("ConfigError");
         });
     })
+
+
     
 }, DEBUG_TIMEOUT);
 
