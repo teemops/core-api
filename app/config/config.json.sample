@@ -1,13 +1,13 @@
 {
     "ExternalId": "cloudapi-1234",
     "mysecrets": {
-        "secret": "WUV7687623HJBJHB87986&23",
-        "confirm_secret": "f6b25ea5278523febdd560825abd621"
+        "secret": "randomly_generated_bysetup.sh",
+        "confirm_secret": "randomly_generated_bysetup.sh"
     },
     "notifications": {
-        "smtp_host": "smtp.mailgun.org",
-        "smtp_user": "teemops@mail.teem.nz",
-        "smtp_pass": "Jbsd&8723b"
+        "smtp_host": "smtp.emailserver.org",
+        "smtp_user": "teemops@myrandomdomain.org",
+        "smtp_pass": "1758723bnssd9b28b"
     },
     "ui_site": {
         "base_url": "http://localhost:9000"

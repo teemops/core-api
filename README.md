@@ -25,6 +25,12 @@ Examples of problems that Teemops wants to solve:
 * Centralised key management (EC2 Key Pairs)
 * Automate a number of cumbersome tasks in AWS
 
+# Security
+Security is day "zero" at Teemops. We like to take security seriously, but we also like to ensure innovation is not hindered by it. If you have any ideas how we could improve security and want to contribute in this area please email security@teemops.com
+
+<!-- Read about thoughts and updates on our blog:
+https://blog.teemops.com/tag/security -->
+
 ## Trello 
 
 There is a public Trello board which has current status of high level features:
