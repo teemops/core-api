@@ -12,7 +12,7 @@
  * - spec_file: The location of a spec file of variables to be updated
  * 
  */
-const DEBUG_TIMEOUT=15000;
+const DEBUG_TIMEOUT=0;
 /**
  * Fields to update
  */
