@@ -29,6 +29,38 @@ function read(fileName){
 }
 
 /**
+ * Returns lines as an array
+ * 
+ * @param {*} fileName Name of file
+ */
+async function readLines(fileName){
+    try{
+        const fileStream=await read(fileName);
+        if(fileStream.length==0){
+            return null;
+        }
+        return fileStream.split("\n");
+    }catch(e){
+        throw e
+    }
+}
+
+/**
+ * Returns line based on pointer number
+ * 
+ * @param {*} fileName Name of file
+ * @param {*} pointer File line number
+ */
+async function readLine(fileName, pointer=0){
+    try{
+        const line=await readLines(fileName);
+        return line[pointer];
+    }catch(e){
+        throw e
+    }
+}
+
+/**
  * Output to file (replace all file content)
  * 
  * @param {*} content 
@@ -94,6 +126,8 @@ async function getConfigItem(name, fileName){
 
 module.exports=init;
 module.exports.read=read;
+module.exports.readLines=readLines;
+module.exports.readLine=readLine;
 module.exports.write=write;
 module.exports.updateConfig=updateConfigItem;
 module.exports.getConfig=getConfigItem;

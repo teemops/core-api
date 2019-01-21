@@ -12,7 +12,7 @@
  * - spec_file: The location of a spec file of variables to be updated
  * 
  */
-const DEBUG_TIMEOUT=1;
+const DEBUG_TIMEOUT=5000;
 
 if (typeof Promise === 'undefined') {
     var async = require('asyncawait/async');
@@ -61,14 +61,17 @@ node update_secret.js <name> <value>
 const add_secret=async function(key, source, dest){
     
     try{
-        var secret=await file.read(source);
-    
+        var secret=await file.readLine(source);
         //array of config hierarchical value (e.g. s3.appsometinng)
         var full_dest_item=key.toString().split(".");
         //get top level value
         var currentValue=await file.getConfig(full_dest_item[0], dest);
-        console.log(currentValue)
+
         if(full_dest_item.length>=1){
+            if(currentValue==undefined){
+                //empty object needs to be created
+                currentValue={};
+            }
             currentValue[full_dest_item[1]]=secret;
         }else{
             currentValue=secret;
@@ -78,7 +81,7 @@ const add_secret=async function(key, source, dest){
     }catch(e){
         throw e
     }
-    
+
 }
 
 console.log('waiting...');
