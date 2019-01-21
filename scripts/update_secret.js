@@ -12,8 +12,7 @@
  * - spec_file: The location of a spec file of variables to be updated
  * 
  */
-const DEBUG_TIMEOUT=1000;
-const CONFIG_FILE='../app/config/config.json';
+const DEBUG_TIMEOUT=1;
 
 if (typeof Promise === 'undefined') {
     var async = require('asyncawait/async');
@@ -41,7 +40,8 @@ if (process.argv[2]=="help"){
 var args={
     cwd: process.argv[1],
     source: process.argv[2],
-    key: process.argv[3]
+    dest: process.argv[3],
+    key: process.argv[4]
 };
 
 function help(){
@@ -58,7 +58,7 @@ node update_secret.js <name> <value>
  * @param {*} key Name of field in config file to update
  * @param {*} source Source file to use 
  */
-const add_secret=async function(key, source){
+const add_secret=async function(key, source, dest){
     
     try{
         var secret=await file.read(source);
@@ -66,7 +66,7 @@ const add_secret=async function(key, source){
         //array of config hierarchical value (e.g. s3.appsometinng)
         var full_dest_item=key.toString().split(".");
         //get top level value
-        var currentValue=await file.getConfig(full_dest_item[0], CONFIG_FILE);
+        var currentValue=await file.getConfig(full_dest_item[0], dest);
         console.log(currentValue)
         if(full_dest_item.length>=1){
             currentValue[full_dest_item[1]]=secret;
@@ -89,7 +89,7 @@ console.log('waiting...');
  * 
  */
 setTimeout(function(){
-    add_secret(args.key, args.source).then(function(){
+    add_secret(args.key, args.source, args.dest).then(function(){
         console.log('Secret added');
     }).catch(function(error){
         console.log(error);
