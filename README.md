@@ -1,6 +1,8 @@
 # Teemops Core API #
 Simplified AWS Operations
 
+Join Slack Channel: http://bit.ly/topslack
+
 This is the API part of https://github.com/teemops/teemops
 
 Alpha code, not ready for release or maintenance.
