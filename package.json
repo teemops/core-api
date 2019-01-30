@@ -30,14 +30,6 @@
     "mocha": "^5.2.0",
     "nodemon": "^1.18.9"
   },
-  "maintainers": [
-    {
-      "name": "kiwifellows",
-      "email": "ben@teemops.com"
-    },
-    {
-      "name": "sarahr",
-      "email": "sarah@teemops.com"
-    }
-  ]
+  "author": "Ben Fellows <kiwifellows@gmail.com>",
+  "license": "gpl-3.0"
 }

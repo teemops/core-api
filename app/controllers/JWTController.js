@@ -12,7 +12,8 @@ module.exports=function(){
     createJWT: function(paylod){
        config.load('./app/config/config.json');
        var secret=config.get("mysecrets","secret");
-       var token=jwt.sign(paylod, secret, { expiresIn: '2h' });
+       var token=jwt.sign(paylod, secret, { expiresIn: '2h', algorithm: 'AES-' });
+       
        return token;
     },
 

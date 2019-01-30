@@ -5,8 +5,7 @@ if (typeof Promise === 'undefined') {
 } 
 var mysql    = require('mysql');
 var config = require('config-json');
-console.log("Environment Variable Called MODE: "+process.env.MODE);
-config.load('./app/config/db.test.json');
+config.load('./app/config/database.json');
 
 var pool = mysql.createPool({
     host     : config.get("mysql", "host"),

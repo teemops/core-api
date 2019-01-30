@@ -19,11 +19,12 @@ var UserCloudConfigs = require('./app/views/usercloudconfigs.js');
 var config = require('config-json');
 var sse = require('./app/drivers/sse.js');
 var clientList = require('./app/models/clientList.js');
-if (typeof Promise === 'undefined') {
+//if (typeof Promise === 'undefined') {
+  console.log("Using promises library");
   var async = require('asyncawait/async');
   var await = require('asyncawait/await');
   var Promise = require('bluebird');
-} 
+//} 
 var setup = require("./app/controllers/SetupController.js");
 config.load('./app/config/config.json');
 // Start function
