@@ -9,10 +9,10 @@ module.exports=function(){
     * @description: JWT.io token
     * Used in Authorization Header
     */
-    createJWT: function(paylod){
+    createJWT: function(payload){
        config.load('./app/config/config.json');
        var secret=config.get("mysecrets","secret");
-       var token=jwt.sign(paylod, secret, { expiresIn: '2h', algorithm: 'AES-' });
+       var token=jwt.sign(payload, secret, { expiresIn: '2h', algorithm: 'HS256' });
        
        return token;
     },

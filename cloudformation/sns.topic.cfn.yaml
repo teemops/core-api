@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: SNS Topic
+Parameters:
+  SQSLabel:
+    Type: String
+    Description: 'Teemops SQS Label'
+    Default: 'teemops_main'
+Resources:
+  TopsSNS:
+    Type: AWS::SNS::Topic
+  TopsSNSPolicy:
+    DependsOn: TopsSNS
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: TopsSNSTopicPolicy
+        Version: '2012-10-17'
+        Statement:
+        - Sid: alllow-admin-account
+          Effect: Allow
+          Principal:
+            AWS: "*"
+          Action:
+          - SNS:Publish
+          - SNS:RemovePermission
+          - SNS:SetTopicAttributes
+          - SNS:DeleteTopic
+          - SNS:ListSubscriptionsByTopic
+          - SNS:GetTopicAttributes
+          - SNS:Receive
+          - SNS:AddPermission
+          - SNS:Subscribe
+          Resource: "*"
+          Condition:
+              StringEquals:
+                'AWS:SourceOwner': !Ref "AWS::AccountId"
+        - Sid: allow-all-aws-users
+          Effect: Allow
+          Principal:
+            AWS: "*"
+          Action: sns:Publish
+          Resource: "*"
+      Topics:
+      - !Ref TopsSNS
+  TopsSubscriber:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref TopsSNS
+      Endpoint: 
+        Fn::Join:
+          - ''
+          - - 'arn:aws:sqs:us-west-2:'
+            - !Ref 'AWS::AccountId'
+            - ':'
+            - !Ref SQSLabel
+Outputs:
+  TopicArn:
+    Description: Teemops SNS Topic
+    Value: !Ref TopsSNS

@@ -9,19 +9,7 @@ if (typeof Promise === 'undefined') {
     var await = require('asyncawait/await');
     var Promise = require('bluebird');
 } 
-switch(process.env.MODE){
-    case "prod":
-        config.load('./app/config/aws.prod.json');
-        break;
-    case "test":
-        config.load('./app/config/aws.test.json');
-        break;
-    case "dev":
-        config.load('./app/config/aws.json');
-        break;
-    default:
-        config.load('./app/config/aws.json');
-}
+config.load('./app/config/config.json');
 
 var ep = new AWS.Endpoint(config.get("sqs", "endpoint"));
 var sqs = new AWS.SQS({endpoint: ep, region: config.get("sqs", "region")});

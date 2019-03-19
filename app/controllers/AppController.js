@@ -3,23 +3,26 @@ if (typeof Promise === 'undefined') {
     var await = require('asyncawait/await');
     var Promise = require('bluebird');
 } 
+var config, key, metaS3, defaultS3s;
 var schemas = require("../../app/models/");
 var appData = require("../../app/drivers/dynamo.js");
 var mysql = require("../../app/drivers/mysql.js");
 var appS3 = require("../../app/drivers/s3.js");
 var ec2=require("../../app/drivers/ec2.js")
 var tNotify = require("../../app/drivers/notify");
-var key=require("../../app/controllers/KeyController");
+var keyController=require("../../app/controllers/KeyController");
 var util = require('util');
 var _ = require("lodash");
 var mydb= mysql();
-var metaS3=appS3();
-var defaultS3s=metaS3.getBuckets();
 
 module.exports=function(){
     return {
-        init:  function init () {
+        init:  function init (appConfig) {
+            config=appConfig;
             mydb.init();
+            key=keyController(appConfig);
+            metaS3=appS3(config);
+            defaultS3s=metaS3.getBuckets();
         },
         getAppByIDAuth: function getAppByIDAuth(authUserid, appID, cb){
             var sql="CALL sp_getAppByUserID(?,?)";
@@ -279,7 +282,7 @@ module.exports=function(){
             ];
             //check or create keypair for giving awsconfigid
             try{
-                const createKeyPair=await this.addKeyPair(authUserid, data.awsConfigId);
+                await this.addKeyPair(authUserid, data.awsConfigId);
                 const results= await mydb.updatePromise(sql, params);
                 if(results!=null){
                     console.log(results);
@@ -393,10 +396,15 @@ module.exports=function(){
              * }
              */
             try{
-                const data=await mydb.queryPromise(sql, params);
-                const doesKeyPairExist=await key.check(userId,data.region,data.roleArn);
-
-                return true;
+                const data=await mydb.getRow(sql, params);
+                if(data!=null){
+                    const roleArn=JSON.parse(data.auth_data).arn;
+                    const doesKeyPairExist=await key.check(userId, data.region, roleArn);
+                    if(!doesKeyPairExist){
+                        const createResult=await key.create(userId, data.region, roleArn);
+                    }
+                }
+                
             }catch(e){
                 throw e;
             }

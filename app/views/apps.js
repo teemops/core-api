@@ -8,6 +8,8 @@ if (typeof Promise === 'undefined') {
     var await = require('asyncawait/await');
     var Promise = require('bluebird');
 } 
+var config = require('config-json');
+config.load('./app/config/config.json');
 var appControlller = require("../../app/controllers/AppController.js");
 var jobController = require("../../app/controllers/JobController.js");
 var eventController = require("../../app/controllers/EventController.js");
@@ -27,7 +29,8 @@ router.use(bodyParser.json());
 router.use(auth);
 
 //Auth middleware for all routes in this view
-myApps.init();
+myApps.init(config);
+myJobs.init(config);
 
 // define the get route
 router.get('/', function(req, res) {
@@ -217,6 +220,46 @@ router.put('/job', async function(req, res) {
     }else{
         try{
             const jobData=await myJobs.addJob(req.auth_userid,adddata);
+            console.log("Queue data: "+jobData);
+            myApps.updateAppStatus(req.auth_userid, req.body.appid, adddata.action,
+                function(response){
+    
+                    if(response && !response.error){
+                        console.log("Status "+ response);
+                        //myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
+                        res.json({status: response});
+                    }else{
+    
+                    }
+                }
+            );
+        }catch(e){
+            res.json({status: "Error adding a job."});
+        }
+    }
+});
+
+/**
+ * @author: Ben Fellows <ben@teemops.com>
+ * @description: Launches App
+ * @usage: request data needs to include
+ * {
+ * userid: <user_id>,
+ * action: <action>, e.g. start, stop, remove
+ * appid: <app_id>
+ * }
+ */
+router.post('/launch', async function(req, res) {
+    //console.log("PUT app/job function Req.body.appid"+req.body.appid);
+
+    var adddata={userid: req.auth_userid, appid: req.body.appid, action: req.body.action, task: req.body.task};
+
+    if(req.auth_userid!=req.body.userid){
+        console.log("User "+req.auth_userid+" is not authorised to launch apps for "+req.body.userid);
+        res.json({status: "authorisation error"});
+    }else{
+        try{
+            const jobData=await myJobs.launchApp(req.auth_userid,adddata);
             console.log("Queue data: "+jobData);
             myApps.updateAppStatus(req.auth_userid, req.body.appid, adddata.action,
                 function(response){

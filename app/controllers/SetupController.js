@@ -5,6 +5,7 @@ if (typeof Promise === 'undefined') {
 } 
 var config, cfn;
 const KEYSTORE_TEMPLATE='s3.keyStore';
+const SNS_TEMPLATE='sns.topic';
 const DEFAULT_CONFIG_PATH='app/config/config.json';
 var appQ = require("../../app/drivers/sqs.js");
 var kms=require("../../app/drivers/kms");
@@ -32,10 +33,12 @@ async function init(appConfig){
     if(createKey){
         console.log("Teemops Key was created or already present");
     }
-
+    
     var keyStore=await createKeyStore();
 
-    return startQ && createKey && keyStore;
+    var createTopic=await createSNSTopic();
+
+    return startQ && createKey && keyStore && createTopic;
 }
 
 /**
@@ -70,6 +73,33 @@ async function createKMSKey(){
 }
 
 /**
+ * Creates SNS Topic and subscription to Lambda Serverless
+ * function that will update status
+ * 
+ */
+async function createSNSTopic(){
+    try{
+        var outputResults=await cfn.getOutputs('teemops-snstopic');
+        var result;
+        if(outputResults!=null && outputResults[0].OutputKey=='TopicArn'){
+            result=outputResults[0].OutputValue;
+        }else{
+            result=await cfn.create('snstopic', SNS_TEMPLATE, null, true, false, false);
+            outputResults=await cfn.getOutputs('teemops-snstopic');
+            if(outputResults!=null && outputResults[0].OutputKey=='TopicArn'){
+                result=outputResults[0].OutputValue;
+            }
+        }
+        
+        
+        const updateConfig=file.updateConfig('SNS', result, DEFAULT_CONFIG_PATH);
+        return true;
+    }catch(e){
+        return e;
+    }
+}
+
+/**
  * Creates key store in S3 for storing secrets for apps, ec2s etc..
  * Items are stored in S3, but are encrypted with a KMS key 
  * that is not accessible by S3 policy, only once an object is pulled from S3
@@ -82,7 +112,7 @@ async function createKeyStore(){
         if(outputResults!=null && outputResults[0].OutputKey=='BucketName'){
             result=outputResults[0].OutputValue;
         }else{
-            result=await cfn.create('keystore', KEYSTORE_TEMPLATE, null, true);
+            result=await cfn.create('keystore', KEYSTORE_TEMPLATE, null, true, false, false);
         }
         
         var s3Config=await file.getConfig('s3', DEFAULT_CONFIG_PATH);

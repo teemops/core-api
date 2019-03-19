@@ -3,17 +3,36 @@ var awsTask=require("../../app/drivers/awsTask");
 var file=require("../../app/drivers/file");
 
 const STATE_COMPLETED="CREATE_COMPLETE";
-var config, cfn;
+const ERROR_CODE_NOSTACK=400;
+var config, cfn, templatesURL, snsTopicArn;
 
 function init (appConfig) {
     config=appConfig;
+    templatesURL=config.get("cfn", "templates");
     var ep = new AWS.Endpoint(config.get("cfn", "endpoint"));
     cfn = new AWS.CloudFormation({endpoint: ep, region: config.get("default_region")});
-
+    snsTopicArn=config.get("SNS");
     return {
         create: createStack,
-        getOutputs: getStackOutputs
+        getOutputs: getStackOutputs,
+        creds: useSTSCredentials
     }
+}
+
+/**
+ * Uses the AWS STS assume credentials from an STS Assume call
+ * 
+ * @param {*} credentials 
+ */
+function useSTSCredentials(region, credentials){
+    AWS.config.update({
+        accessKeyId:credentials.accessKeyId,
+        secretAccessKey:credentials.secretAccessKey,
+        sessionToken:credentials.sessionToken,
+        region:region
+    });
+    var ep = new AWS.Endpoint(config.get("cfn", "endpoint"));
+    cfn = new AWS.CloudFormation({endpoint: ep, region: region});
 }
 
 async function cfnTask(task, params=null){
@@ -38,6 +57,7 @@ async function waitFor(waitCommand, params){
         });
     });
 }
+
 /**
  * Launches create CloudFormation stack and optionally waits for CREATE_COMPLETE state 
  * before returning a result.
@@ -46,18 +66,35 @@ async function waitFor(waitCommand, params){
  * @param {*} template 
  * @param {*} parameters 
  * @param {*} wait 
+ * @param {*} url Is the template a URL or local file?
  */
-async function createStack(label, template, parameters=null, wait=false){
+async function createStack(label, templateName, parameters=null, wait=false, url=false, notify=true){
     try{
         var stackName="teemops-"+label;
         
-        const templateBody=await file.read("cloudformation/"+template+".cfn.yaml");
+        if(url){
+            
+            const template=templatesURL+templateName+".cfn.yaml";
+            
+            var params = {
+                StackName: stackName,
+                TemplateURL: template,
+                Parameters: getParams(parameters)
+            };
+        }else{
+            const templateBody=await file.read("cloudformation/"+templateName+".cfn.yaml");
         
-        var params = {
-            StackName: stackName,
-            TemplateBody: templateBody,
-            Parameters: parameters
-        };
+            var params = {
+                StackName: stackName,
+                TemplateBody: templateBody,
+                Parameters: [
+                    getParams(parameters)
+                ]
+            };
+        }
+        if(notify){
+            params.NotificationARNs=[snsTopicArn];
+        }
         const result=await cfnTask('createStack', params);
         
         if(wait){
@@ -102,6 +139,9 @@ async function getStackOutputs(stackName){
             return null;
         }
     }catch(e){
+        if(e.statusCode==ERROR_CODE_NOSTACK){
+            return null;
+        }
         throw e;
     }
     
@@ -117,6 +157,24 @@ async function checkStackStatus(stackName){
             return wait.Stacks[0].Outputs[0].OutputValue;
         }
     }
+}
+/**
+ * Converts an object to an Array of CloudFormation compatible
+ * ParameterKey/ParameterValue pairs.
+ * @param {*} params just an object
+ */
+function getParams(params){
+    var cfnParamsArray=[];
+    if(params==null){
+        return cfnParamsArray;
+    }
+    Object.keys(params).forEach(function(value, index, array){
+        cfnParamsArray.push({
+            ParameterKey: value,
+            ParameterValue: params[value].toString()
+        });
+    });
+    return cfnParamsArray;
 }
 
 function sleep(ms){

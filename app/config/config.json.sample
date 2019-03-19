@@ -1,5 +1,6 @@
 {
     "ExternalId": "cloudapi-1234",
+    "AWSAccountId": "163057906376",
     "mysecrets": {
         "secret": "randomly_generated_bysetup.sh",
         "confirm_secret": "randomly_generated_bysetup.sh"
@@ -55,7 +56,8 @@
         "endpoint": "https://s3-us-west-2.amazonaws.com"
     },
     "cfn":{
-        "endpoint": "https://cloudformation.us-west-2.amazonaws.com"
+        "endpoint": "https://cloudformation.us-west-2.amazonaws.com",
+        "templates": "https://s3-us-west-2.amazonaws.com/templates.teemops.com/"
     },
     "kms":{
         "endpoint": "https://kms.us-west-2.amazonaws.com",

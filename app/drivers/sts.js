@@ -11,17 +11,17 @@ var sts= new AWSSTS.STS();
 
 const sessionName="Teemops_core_api";
 
+module.exports=init;
+
 function init(appConfig){
     config=appConfig;
     externalId=config.get("ExternalId");
-
     return {
-        assume: stsAssume
+      assume: stsAssume
     }
 }
 
 async function stsAssume(event) {
-    console.log("RoleARN: "+event.RoleArn);
     var params={
       DurationSeconds: 900,
       RoleArn: event.RoleArn,
@@ -34,8 +34,6 @@ async function stsAssume(event) {
               reject(err);
             }else{
               if (data.Credentials.length!==0) {
-                console.log("Credentials:"+ JSON.stringify(data.Credentials));
-                console.log("Region: "+event.region);
                 var creds={
                   accessKeyId:data.Credentials.AccessKeyId,
                   secretAccessKey:data.Credentials.SecretAccessKey,
@@ -52,4 +50,3 @@ async function stsAssume(event) {
 
 }
 
-module.exports=init;

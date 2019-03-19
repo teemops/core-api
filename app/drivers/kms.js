@@ -3,14 +3,22 @@ if (typeof Promise === 'undefined') {
     var await = require('asyncawait/await');
     var Promise = require('bluebird');
 }
-
 var AWS    = require('aws-sdk'); 
-var config = require('config-json');  
-config.load('./app/config/aws.json');
+var config,defaultKeyName,kms;
 
-var ep = new AWS.Endpoint(config.get("kms", "endpoint"));
-var defaultKeyName=config.get("kms", "defaultKeyName");
-var kms = new AWS.KMS({endpoint: ep, region: config.get("kms", "region")});
+
+module.exports=function(appConfig){
+    config=appConfig;
+    ep = new AWS.Endpoint(config.get("kms", "endpoint"));
+    defaultKeyName=config.get("kms", "defaultKeyName");
+    kms = new AWS.KMS({endpoint: ep, region: config.get("kms", "region")});
+
+    return {
+        addKey:addKey,
+        encrypt:encrypt,
+        decrypt:decrypt
+    }
+}
 
 /**
  * Adds a KMS key to the master teemops AWS account
@@ -56,22 +64,49 @@ function kmsTask(task, params=null){
 }
 
 /**
- * Provides encrypted value based on the data parameter
+ * Returns encrypted value based on text input
  *  
  * @param {*} key 
- * @param {*} data 
+ * @param {*} text 
  */
-async function encrypt(key, data){
-
+async function encrypt(key=defaultKeyName, text){
+    var params={
+        KeyId: key,
+        Plaintext: new Buffer(text)
+    }
+    try{
+        const encryptResult=await kmsTask('encrypt', params);
+        if(encryptResult.CiphertextBlob!=null){
+            return encryptResult.CiphertextBlob;
+        }else{
+            return false;
+        }
+    }catch(e){
+        throw e;
+    }
+    
 }
 
 /**
- * Provides decrypted value based on the data provided
+ * Provides decrypted value based on the text provided
  * 
- * @param {*} data 
+ * @param {*} text 
  */
-async function decrypt(data){
-
+async function decrypt(text){
+    var params={
+        CiphertextBlob: new Buffer(text)
+    }
+    try{
+        const decryptedResult=await kmsTask('decrypt', params);
+        if(decryptedResult.Plaintext!=null){
+            return decryptedResult.Plaintext;
+        }else{
+            return false;
+        }
+    }catch(e){
+        throw e;
+    }
+    
 }
 
 /**
@@ -90,6 +125,3 @@ async function doesKeyExist(keyName){
     
 }
 
-module.exports.addKey=addKey;
-module.exports.encrypt=encrypt;
-module.exports.decrypt=decrypt;

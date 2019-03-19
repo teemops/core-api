@@ -12,7 +12,7 @@ var jms = require('jmespath');
 
 //config
 var config = require('config-json');
-config.load('./app/config/aws.json');
+config.load('./app/config/config.json');
 
 async function ec2RunTask(event, credentials) {
     console.log("Credentials in EC2 lib: "+credentials);

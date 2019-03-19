@@ -66,6 +66,19 @@ module.exports=function(){
                });    
            })
        },
+       /**
+         * @author: Ben Fellows <ben@teemops.com>
+         * @description: Returns single row
+         * @returns: Promise<array>
+         */
+       getRow: async function getRow(sqlstring, params){
+            const result=await this.queryPromise(sqlstring, params);
+            if(result!=null){
+                return result[0][0];
+            }else{
+                return null;
+            }
+       },
         /**
          * @author: Ben Fellows <ben@teemops.com>
          * @description: INSERT query

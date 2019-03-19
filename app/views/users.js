@@ -121,7 +121,6 @@ router.post('/login', function(req, res) {
         if (err) { 
             res.json({ err });  
         }else{
-            console.log("Login Result: "+token);
             res.json( token );
         }
 

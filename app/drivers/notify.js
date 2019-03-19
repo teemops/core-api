@@ -15,19 +15,7 @@ var jms = require('jmespath');
 //config
 var config = require('config-json');
 
-switch(process.env.MODE){
-    case "prod":
-        config.load('./app/config/aws.prod.json');
-        break;
-    case "test":
-        config.load('./app/config/aws.test.json');
-        break;
-    case "dev":
-        config.load('./app/config/aws.json');
-        break;
-    default:
-        config.load('./app/config/aws.json');
-}
+config.load('./app/config/config.json');
 
 var Tables={notify: config.get("notify", "table"), status: config.get("notify", "status")};
 var notifyRegion=config.get("notify", "region");
