@@ -46,6 +46,7 @@ Resources:
     Type: AWS::SNS::Subscription
     Properties:
       TopicArn: !Ref TopsSNS
+      Protocol: sqs
       Endpoint: 
         Fn::Join:
           - ''
@@ -53,6 +54,28 @@ Resources:
             - !Ref 'AWS::AccountId'
             - ':'
             - !Ref SQSLabel
+  TopsMainSQSPolicy:
+    DependsOn: TopsSNS
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - Fn::Join:
+          - ''
+          - - 'https://sqs.us-west-2.amazonaws.com/'
+            - !Ref 'AWS::AccountId'
+            - '/'
+            - !Ref SQSLabel
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Sid: allow-sns-tops
+          Effect: Allow
+          Principal: "*"
+          Action:
+          - sqs:SendMessage
+          Condition:
+            ArnEquals:
+              'aws:SourceArn': !Ref TopsSNS
 Outputs:
   TopicArn:
     Description: Teemops SNS Topic

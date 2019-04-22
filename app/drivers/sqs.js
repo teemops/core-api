@@ -112,7 +112,7 @@ module.exports=function(){
                     }
                     */
                 });
-            })
+            });
             
         },
         /**
@@ -153,17 +153,19 @@ module.exports=function(){
                 VisibilityTimeout: 0,
                 WaitTimeSeconds: 0
             };
-            
-            sqs.receiveMessage(
-                qParams, 
-                function(err, data) {
-                if (err){
-                    callback(err, null);
-                }
-                else{
-                    callback(null, data);
-                }          // successful response
+            return new Promise(function(resolve, reject) {
+                sqs.receiveMessage(
+                    qParams, 
+                    function(err, data) {
+                        if (err){
+                            reject(err);
+                        }
+                        else{
+                            resolve(data);
+                        }          // successful response
+                });
             });
+            
 
         },
         /**

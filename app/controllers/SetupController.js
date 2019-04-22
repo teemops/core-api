@@ -3,7 +3,7 @@ if (typeof Promise === 'undefined') {
     var await = require('asyncawait/await');
     var Promise = require('bluebird');
 } 
-var config, cfn;
+var config, cfn, jobsQName;
 const KEYSTORE_TEMPLATE='s3.keyStore';
 const SNS_TEMPLATE='sns.topic';
 const DEFAULT_CONFIG_PATH='app/config/config.json';
@@ -23,6 +23,7 @@ console.log(defaultQs.jobsq + "default jobsq");
 async function init(appConfig){
     config=appConfig;
     cfn=cfnDriver(appConfig);
+    jobsQName=config.get("sqs", "jobsq");
     console.log("appConfig: "+JSON.stringify(appConfig));
     //check Message Queues are setup
     var startQ= await createJobQ();
@@ -84,15 +85,18 @@ async function createSNSTopic(){
         if(outputResults!=null && outputResults[0].OutputKey=='TopicArn'){
             result=outputResults[0].OutputValue;
         }else{
-            result=await cfn.create('snstopic', SNS_TEMPLATE, null, true, false, false);
+            var params={
+                SQSLabel: jobsQName
+            }
+            result=await cfn.create('snstopic', SNS_TEMPLATE, params, true, false, false);
             outputResults=await cfn.getOutputs('teemops-snstopic');
             if(outputResults!=null && outputResults[0].OutputKey=='TopicArn'){
                 result=outputResults[0].OutputValue;
             }
         }
         
-        
         const updateConfig=file.updateConfig('SNS', result, DEFAULT_CONFIG_PATH);
+
         return true;
     }catch(e){
         return e;

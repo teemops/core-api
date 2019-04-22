@@ -31,7 +31,7 @@ function useSTSCredentials(region, credentials){
         sessionToken:credentials.sessionToken,
         region:region
     });
-    var ep = new AWS.Endpoint(config.get("cfn", "endpoint"));
+    var ep = new AWS.Endpoint('https://cloudformation.'+region+'.amazonaws.com');
     cfn = new AWS.CloudFormation({endpoint: ep, region: region});
 }
 
@@ -87,9 +87,7 @@ async function createStack(label, templateName, parameters=null, wait=false, url
             var params = {
                 StackName: stackName,
                 TemplateBody: templateBody,
-                Parameters: [
-                    getParams(parameters)
-                ]
+                Parameters: getParams(parameters)
             };
         }
         if(notify){

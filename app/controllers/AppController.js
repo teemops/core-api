@@ -45,31 +45,27 @@ module.exports=function(){
                 }
             );
         },
-        getAppByID: function getAppByID(appID, cb){
-            var sql = "SELECT a.*, udp.*, udac.*, cp.name as cloud_provider FROM app a  left join user_data_providers udp";
-            sql+=" ON a.userid=udp.userid right join";
-            sql+=" user_data_aws_configs udac";
-            sql+=" ON a.userid=udac.userid";
-            sql+=" right join cloud_provider cp";
-            sql+=" ON a.cloud=cp.id";
-            sql+=" WHERE a.id=?";
+        getUserFromAppId: function getUserId(appID){
+            var sql = "CALL sp_getUserIdFromApp (?)";
 
             var params = [appID];
+            return new Promise(function(resolve, reject){
+                //query database with sql statement and retrun results or error through callback function
+                mydb.query(
+                    sql, params,
+                    function(err, results){
+                        if (err) reject(err);
 
-            //query database with sql statement and retrun results or error through callback function
-            mydb.query(
-                sql, params,
-                function(err, results){
-                    if (err) throw err;
+                        if(results!=null){
 
-                    if(results!=null){
-
-                        cb({result:results[0]});
-                    }else{
-                        cb({error:"No rows"});
+                            resolve(results[0][0].userID);
+                        }else{
+                            reject("No rows");
+                        }
                     }
-                }
-            );
+                );
+            });
+            
         },
         /**
          * @author: Ben Fellows <ben@teemops.com>
@@ -302,52 +298,62 @@ module.exports=function(){
          * Refer to mysql table job_type which has a list of valid actions
          * Also refer to app_status table for valid status names
          */
-        updateAppStatus: function updateApp(authUserid, appId, action, cb){
+        updateAppStatus: function updateApp(authUserid, appId, action){
+            var sql = "UPDATE app SET status=(select newstatus from job_type where action=?) where id=? and userid=?";
+            var params = [action, appId, authUserid];
+            return new Promise(function(resolve, reject){
+                    //insert query with sql, parameters and retrun results or error through callback function
+                    mydb.update(
+                        sql, params,
+                        function(err, results){
+                            if (err) reject(err);
 
-           var sql = "UPDATE app SET status=(select newstatus from job_type where action=?) where id=? and userid=?";
-           var params = [action, appId, authUserid];
-
-           //insert query with sql, parameters and retrun results or error through callback function
-           mydb.update(
-               sql, params,
-               function(err, results){
-                   if (err) throw err;
-
-                   if(results!=null){
-                       console.log(JSON.stringify(results));
-                       var status=1;
-                       switch(action) {
-                            case 'ec2.launch':
-                                status=2;
-                                break;
-                            case 'ec2.stop':
-                                status=4;
-                                break;
-                            case 'ec2.start':
-                                status=2;
-                                break;
-                            case 'ec2.delete':
-                                status=9;
-                                break;
-                            case 'ec2.reboot':
-                                status=8;
-                                break;
-                            case 'rds.create':
-                                status=2;
-                                break;
-                            case 'rds.delete':
-                                status=9;
-                                break;
-                            default:
-                                status=1;
+                            if(results!=null){
+                                console.log(JSON.stringify(results));
+                                var status=1;
+                                switch(action) {
+                                    case 'ec2.launch':
+                                        status=2;
+                                        break;
+                                    case 'ec2.stop':
+                                        status=4;
+                                        break;
+                                    case 'ec2.start':
+                                        status=2;
+                                        break;
+                                    case 'ec2.delete':
+                                        status=9;
+                                        break;
+                                    case 'ec2.reboot':
+                                        status=8;
+                                        break;
+                                    case 'rds.create':
+                                        status=2;
+                                        break;
+                                    case 'rds.delete':
+                                        status=9;
+                                        break;
+                                    default:
+                                        status=1;
+                                }
+                                resolve(status);
+                            }else{
+                                resolve({error:"update_status_error"});
+                            }
                         }
-                       cb(status);
-                   }else{
-                       cb({error:"update_status_error"});
-                   }
-               }
-           );
+                    );
+            });
+       },
+       updateStatusFromCFN: async function updateStatusFromCFN(appId, action){
+            try{
+                
+                const userId=await this.getUserFromAppId(appId);
 
+                const statusUpdate=await this.updateAppStatus(userId, appId, action);
+                return statusUpdate;
+            }catch(e){
+                throw e;
+            }
        },
        /**
         * Gets the applications or servers infrastructure details which are then

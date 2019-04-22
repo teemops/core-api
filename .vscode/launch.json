@@ -18,6 +18,12 @@
         {
             "type": "node",
             "request": "launch",
+            "name": "Teemops Service",
+            "program": "${workspaceFolder}/app/service/status.js"
+        },
+        {
+            "type": "node",
+            "request": "launch",
             "name": "Test Setup Script",
             "program": "${workspaceFolder}/scripts/setup.js",
             "runtimeArgs": [

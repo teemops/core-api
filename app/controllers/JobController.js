@@ -62,6 +62,21 @@ module.exports=function(){
             }
             
         },
+        stopApp: async function stopApp(authUserid, data){
+
+        },
+        startApp: async function startApp(authUserid, data){
+
+        },
+        deleteApp: async function deleteApp(authUserid, data){
+
+        },
+        rebootApp: async function rebootApp(authUserid, data){
+
+        },
+        cloneApp: async function cloneApp(authUserid, data){
+
+        },
         /**
          * Parameters for the CloudFormation launch of an Ec2 Instance
          * 
@@ -78,6 +93,7 @@ module.exports=function(){
                 RootVolumeSize: data.configData.cloud.diskSize,
                 AppId: data.appId,
                 AppName: data.name,
+                CustomerId: data.userID,
                 KeyPair: data.keyPair,
                 Subnet: data.appSubnet,
                 SecurityGroup: data.appSecurityGroup
