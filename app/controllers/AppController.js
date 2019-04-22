@@ -344,6 +344,12 @@ module.exports=function(){
                     );
             });
        },
+       /**
+        * Updates App Status from CFN notification.
+        * 
+        * @param {*} appId 
+        * @param {*} action 
+        */
        updateStatusFromCFN: async function updateStatusFromCFN(appId, action){
             try{
                 
@@ -355,6 +361,24 @@ module.exports=function(){
                 throw e;
             }
        },
+       /**
+        * Updates meta data column in app table
+        * 
+        * @param {*} appId 
+        * @param {*} data 
+        */
+       updateMetaData: async function updateMeta(appId, data){
+        try{
+            var sql = "UPDATE app SET meta_data=? where id=?";
+            var params = [data, appId];
+
+            const result = await mydb.updatePromise(sql, params);
+
+            return result;
+        }catch(e){
+            throw e;
+        }
+   },
        /**
         * Gets the applications or servers infrastructure details which are then
         * displayed in the infrastructure details.

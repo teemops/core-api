@@ -152,7 +152,7 @@ module.exports=function(){
             });
             
         },
-        updatePromise: function updatePromise(sqlstring, params, callback){
+        updatePromise: function updatePromise(sqlstring, params){
             
            return new Promise(function(resolve, reject){
                 pool.query(sqlstring, params, function(err, result) {

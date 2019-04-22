@@ -145,7 +145,7 @@ module.exports=function(){
          * @description: Reads single item from queue
          * @returns: success or err
          */
-        readitem: function readitem(qURL, callback){
+        readitem: function readitem(qURL){
             console.log("DEBUG QName"+qURL);
             var qParams = {
                 QueueUrl: qURL, /* required */
@@ -173,22 +173,23 @@ module.exports=function(){
          * @description: Removes item from queue
          * @returns: success or err
          */
-        removeitem: function removeitem(qURL, message, callback){
+        removeitem: function removeitem(qURL, message){
             console.log(message.ReceiptHandle);
             var qParams = {
                 ReceiptHandle: message.ReceiptHandle, /* required */
                 QueueUrl: qURL  /* required */
             };
-            
-            sqs.deleteMessage(
-                qParams, 
-                function(err, data) {
-                if (err){
-                    callback(err, null);
-                }
-                else{
-                    callback(null, data);
-                }          // successful response
+            return new Promise(function(resolve, reject){
+                sqs.deleteMessage(
+                    qParams, 
+                    function(err, data) {
+                        if (err){
+                            reject(err);
+                        }
+                        else{
+                            resolve(data);
+                        }          // successful response
+                });
             });
 
         }

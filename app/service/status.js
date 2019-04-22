@@ -12,6 +12,8 @@ if (typeof Promise === 'undefined') {
     var await = require('asyncawait/await');
     var Promise = require('bluebird');
 } 
+//how long between checking SQS??
+const WAIT_TIME = 20000;
 const NOTIFICATION_TYPES = {
     cfn: "CloudFormation"
 }
@@ -32,13 +34,18 @@ const CFN_STATUS = {
 var util  = require('util'),
     spawn = require('child_process').spawn;
 
-    var appQ = require("../../app/drivers/sqs.js");
+var config = require('config-json');
+config.load('./app/config/config.json');
+var appQ = require("../../app/drivers/sqs.js");
 var userController = require("../controllers/UserController.js"); 
 var appController = require("../controllers/AppController.js"); 
+var resourceController = require("../controllers/ResourceController.js"); 
 
 var jobQ=appQ();
 var myUsers=userController();
 var myApps=appController();
+var resource=resourceController();
+resource.init(config);
 
 var defaultQs=jobQ.getQs();
 console.log('Running status service... Ctrl-C to stop. Use supervisor to run as a service on OS.');
@@ -47,29 +54,35 @@ console.log(defaultQs.jobsq + " is the default JOBS Q");
 var code=0;
 
 const myService=async function service(){
+    const qURL=await jobQ.readQURL(defaultQs.jobsq);
+    console.log(qURL);
     while(code==0){
         //get QURL
         try{
-            const qURL=await jobQ.readQURL(defaultQs.jobsq);
-            console.log(qURL);
             const message=await jobQ.readitem(qURL);
             console.log(JSON.stringify(message));
-
-            message.Messages.forEach(async function (value, key) {
-                var msg = JSON.parse(value.Body.toString());
-
-                if (msg.Type != "Notification") {
-                    err = "This function only supports notification events.";
-                    throw err;
-                }
-
-                var cfnStackEvent = getCFNStack(msg.Message);
-                var appId=getAppId(cfnStackEvent);
-                //update App Status
-                const statusResult=await myApps.updateStatusFromCFN(appId, 'cfn.create');
-
-                console.log('Processed MessageId '+ message.Messages[key].MessageId);
-            });
+            if(message.Messages!=undefined){
+                message.Messages.forEach(async function (value, key) {
+                    var msgBody = JSON.parse(value.Body.toString());
+    
+                    if (msgBody.Type != "Notification") {
+                        err = "This function only supports notification events.";
+                        throw err;
+                    }
+    
+                    const statusResult=await updateStatus(msgBody.Message);
+                    if(statusResult){
+                        const removeResult=await removeMessage(qURL, value);
+                        if(removeResult){
+                            console.log('Processed MessageId '+ message.Messages[key].MessageId);
+                        }
+                    }
+                });
+                await waiting(5000);
+            }else{
+                //await
+                await waiting(WAIT_TIME);
+            }
             
         }catch(e){
             console.log("Error: "+e);
@@ -80,12 +93,56 @@ const myService=async function service(){
 }
 myService();
 
+function waiting(ms){
+    return new Promise(resolve=>setTimeout(resolve, ms));
+}
+
 if(code===1){
     console.log('exiting');
     process.exit();
 }
 
+/**
+ * Returns true, updates the status of the app based on cloudformation stack event (completed or delete)
+ * 
+ * @param {*} Message 
+ */
+async function updateStatus(Message){
+    var event = getCFNStack(Message);
+    var appId=getAppId(event);
+    try{
+        if (event.ResourceStatus.toString().indexOf('COMPLETE')>=0 && event.ResourceType.toString().indexOf('Stack')>=0) {
+            console.log("Updating App Status");
+            //update App Status
+            await myApps.updateStatusFromCFN(appId, 'cfn.create');
+        } else if (event.ResourceStatus.toString().indexOf('COMPLETE')>=0 && event.LogicalResourceId.toString() === 'TopsEc2') {
+            console.log("Updating Instance Details");
+            var data=JSON.parse(event.ResourceProperties);
+            
+            instanceId=event.PhysicalResourceId;
+            var instance=await resource.describeInstance(appId, instanceId);
+            data['Instance']=instance;
+            return await myApps.updateMetaData(appId, JSON.stringify(data));
+        }
+    }catch(e){
+        throw e;
+    }
+}
 
+/**
+ * Remove SQS Message by given ID
+ * @param {*} MessageId 
+ */
+async function removeMessage(qURL, Message){
+    try{
+        const message=await jobQ.removeitem(qURL, Message);
+
+        return true;
+    }catch(e){
+        throw e;
+    }
+    
+}
 
 /**
  * Returns Stack as an object, sample format below:
@@ -119,5 +176,12 @@ function getCFNStack(Message) {
  */
 function getAppId(cfnStack) {
     return parseInt(cfnStack.StackName.split('-')[2]);
+}
+
+function getCustomerId(cfnStack){
+    var instanceData=JSON.parse(cfnStack.ResourceProperties);
+    var tags=instanceData.Tags;
+    var tag=tags.filter(tag=>tag.Key=='topscustomerid');
+    return tag[0].Value;
 }
 
