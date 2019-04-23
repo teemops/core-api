@@ -142,7 +142,8 @@ module.exports=function(){
         },
         /**
          * @author: Ben Fellows <ben@teemops.com>
-         * @description: Reads single item from queue
+         * @description: Reads 1 or less items from queue -changed to speed up status updates
+         * TODO: Rename to readitems and create another function that retrieves only 1 message.
          * @returns: success or err
          */
         readitem: function readitem(qURL){

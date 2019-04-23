@@ -312,6 +312,15 @@ module.exports=function(){
                                 console.log(JSON.stringify(results));
                                 var status=1;
                                 switch(action) {
+                                    case 'cfn.create':
+                                        status=3;
+                                        break;
+                                    case 'cw.stopped':
+                                        status=5;
+                                        break;
+                                    case 'cw.running':
+                                        status=3;
+                                        break;
                                     case 'ec2.launch':
                                         status=2;
                                         break;
@@ -345,12 +354,12 @@ module.exports=function(){
             });
        },
        /**
-        * Updates App Status from CFN notification.
+        * Updates App Status from notification.
         * 
         * @param {*} appId 
         * @param {*} action 
         */
-       updateStatusFromCFN: async function updateStatusFromCFN(appId, action){
+       updateStatusFromNotify: async function updateStatusFromNotify(appId, action){
             try{
                 
                 const userId=await this.getUserFromAppId(appId);
@@ -368,17 +377,17 @@ module.exports=function(){
         * @param {*} data 
         */
        updateMetaData: async function updateMeta(appId, data){
-        try{
-            var sql = "UPDATE app SET meta_data=? where id=?";
-            var params = [data, appId];
+            try{
+                var sql = "UPDATE app SET meta_data=? where id=?";
+                var params = [data, appId];
 
-            const result = await mydb.updatePromise(sql, params);
+                const result = await mydb.updatePromise(sql, params);
 
-            return result;
-        }catch(e){
-            throw e;
-        }
-   },
+                return result;
+            }catch(e){
+                throw e;
+            }
+        },
        /**
         * Gets the applications or servers infrastructure details which are then
         * displayed in the infrastructure details.

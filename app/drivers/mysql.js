@@ -72,12 +72,17 @@ module.exports=function(){
          * @returns: Promise<array>
          */
        getRow: async function getRow(sqlstring, params){
+        try{
             const result=await this.queryPromise(sqlstring, params);
             if(result!=null){
                 return result[0][0];
             }else{
                 return null;
             }
+        }catch(e){
+            throw e;
+        } 
+            
        },
         /**
          * @author: Ben Fellows <ben@teemops.com>

@@ -6,6 +6,7 @@ if (typeof Promise === 'undefined') {
 var config, cfn, sts, s3;
 const DEFAULT_CONFIG_PATH='app/config/config.json';
 const CFN_APP_LABEL='app-';
+var resourceController = require("../controllers/ResourceController.js"); 
 var cfnDriver=require("../../app/drivers/cfn");
 var stsDriver=require("../../app/drivers/sts");
 var schemas = require("../../app/models/");
@@ -18,6 +19,8 @@ var _ = require("lodash");
 var mydb= mysql();
 var jobQ=appQ();
 var defaultQs=jobQ.getQs();
+var resource=resourceController();
+
 console.log(defaultQs.jobsq + "default jobsq");
 
 /**
@@ -32,6 +35,7 @@ module.exports=function(){
             cfn=cfnDriver(appConfig);
             sts=stsDriver(appConfig);
             s3=s3Driver(appConfig);
+            resource.init(config);
             mydb.init();
         },
         launchApp: async function launchApp(authUserid, data){
@@ -62,19 +66,30 @@ module.exports=function(){
             }
             
         },
-        stopApp: async function stopApp(authUserid, data){
+        task: async function task(authUserid, data){
+            var appId=data.appid;
+            try{
+                switch(data.action){
+                    case 'ec2.stop':
+                        return await resource.stopApp(authUserid, appId);
+                    case 'ec2.start':
+                        return await resource.startApp(authUserid, appId);
+                    case 'reboot':
+                        return await this.rebootApp(appId);
+                    default:
+                        throw 'No task selected';
+                }
+            }catch(e){
+                throw e;
+            }
+        },
+        deleteApp: async function deleteApp(appId){
 
         },
-        startApp: async function startApp(authUserid, data){
+        rebootApp: async function rebootApp(appId){
 
         },
-        deleteApp: async function deleteApp(authUserid, data){
-
-        },
-        rebootApp: async function rebootApp(authUserid, data){
-
-        },
-        cloneApp: async function cloneApp(authUserid, data){
+        cloneApp: async function cloneApp(appId){
 
         },
         /**

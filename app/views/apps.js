@@ -219,20 +219,23 @@ router.put('/job', async function(req, res) {
         res.json({status: "authorisation error"});
     }else{
         try{
-            const jobData=await myJobs.addJob(req.auth_userid,adddata);
+            const jobData=await myJobs.task(req.auth_userid,adddata);
             console.log("Queue data: "+jobData);
-            myApps.updateAppStatus(req.auth_userid, req.body.appid, adddata.action,
-                function(response){
-    
-                    if(response && !response.error){
-                        console.log("Status "+ response);
-                        //myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
-                        res.json({status: response});
-                    }else{
-    
+            if(jobData){
+                myApps.updateAppStatus(req.auth_userid, adddata.appid, adddata.action,
+                    function(response){
+        
+                        if(response && !response.error){
+                            console.log("Status "+ response);
+                            //myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
+                            res.json({status: response});
+                        }else{
+        
+                        }
                     }
-                }
-            );
+                );
+            }
+            
         }catch(e){
             res.json({status: "Error adding a job."});
         }

@@ -15,7 +15,9 @@ if (typeof Promise === 'undefined') {
 //how long between checking SQS??
 const WAIT_TIME = 20000;
 const NOTIFICATION_TYPES = {
-    cfn: "CloudFormation"
+    cfn: "CloudFormation",
+    ec2: "aws.ec2",
+    rds: "aws.rds"
 }
 const STATUS_TYPES = {
     starting: 'STARTING',
@@ -31,6 +33,12 @@ const CFN_STATUS = {
     CREATE_IN_PROGRESS: STATUS_TYPES.starting,
     CREATE_COMPLETE: STATUS_TYPES.started
 }
+const EC2_STATUS=[
+    'stopped',
+    'stopping',
+    'running',
+    'pending'
+]
 var util  = require('util'),
     spawn = require('child_process').spawn;
 
@@ -77,8 +85,9 @@ const myService=async function service(){
                             console.log('Processed MessageId '+ message.Messages[key].MessageId);
                         }
                     }
+                    await waiting(5000);
                 });
-                await waiting(5000);
+                
             }else{
                 //await
                 await waiting(WAIT_TIME);
@@ -108,22 +117,73 @@ if(code===1){
  * @param {*} Message 
  */
 async function updateStatus(Message){
-    var event = getCFNStack(Message);
-    var appId=getAppId(event);
+    var event = getNotification(Message);
+    
     try{
-        if (event.ResourceStatus.toString().indexOf('COMPLETE')>=0 && event.ResourceType.toString().indexOf('Stack')>=0) {
-            console.log("Updating App Status");
-            //update App Status
-            await myApps.updateStatusFromCFN(appId, 'cfn.create');
-        } else if (event.ResourceStatus.toString().indexOf('COMPLETE')>=0 && event.LogicalResourceId.toString() === 'TopsEc2') {
-            console.log("Updating Instance Details");
-            var data=JSON.parse(event.ResourceProperties);
-            
-            instanceId=event.PhysicalResourceId;
-            var instance=await resource.describeInstance(appId, instanceId);
-            data['Instance']=instance;
-            return await myApps.updateMetaData(appId, JSON.stringify(data));
+        if (event.notifcationType==NOTIFICATION_TYPES.cfn){
+            var appId=getAppId(event);
+
+            if (event.ResourceStatus.toString().indexOf('CREATE_COMPLETE')>=0 && event.ResourceType.toString().indexOf('Stack')>=0) {
+                console.log("Updating App Status");
+                //update App Status
+                var result=await myApps.updateStatusFromNotify(appId, 'cfn.create');
+                if(result.error!=undefined){
+                    throw result.error;
+                }
+                return true;
+            } else if (event.ResourceStatus.toString().indexOf('CREATE_COMPLETE')>=0 && event.LogicalResourceId.toString() === 'TopsEc2') {
+                console.log("Updating Instance Details");
+                var data=JSON.parse(event.ResourceProperties);
+                
+                var instanceId=event.PhysicalResourceId;
+                var instance=await resource.describeInstance(appId, instanceId);
+                data['Instances']=instance;
+                return await myApps.updateMetaData(appId, JSON.stringify(data));
+            } else if(event.ResourceStatus.toString().indexOf('PROGRESS')>=0){
+                //do nothing if PROGRESS except return true so we can discard the message
+                return true;
+            } else if (event.ResourceStatus.toString().indexOf('DELETE_COMPLETE')>=0 && event.ResourceType.toString().indexOf('Stack')>=0) {
+                console.log("DELETING App");
+                //update App Status
+                var result = await myApps.updateStatusFromNotify(appId, 'cfn.delete');
+                if(result.error!=undefined){
+                    throw result.error;
+                }
+                return true;
+            } else{
+                console.log("Discarding message - not relevant");
+                return true;
+            }
+        }else{
+            if(event.source==NOTIFICATION_TYPES.ec2){
+                //get instance Id
+                var instanceId=event.detail['instance-id'];
+                var awsAccountId=event.account;
+                var appId=await resource.getAppIdFromMeta(instanceId, awsAccountId);
+                switch(event.detail['state']){
+                    case 'stopped':
+                        console.log("Updating App Status to Stopped");
+                        //update App Status
+                        var result=await myApps.updateStatusFromNotify(appId, 'cw.stopped');
+                        if(result.error!=undefined){
+                            throw result.error;
+                        }
+                        break;
+                    case 'running':
+                        console.log("Updating App Status to Running");
+                        //update App Status
+                        var result=await myApps.updateStatusFromNotify(appId, 'cw.running');
+                        if(result.error!=undefined){
+                            throw result.error;
+                        }
+                        break;
+                    default:
+                        return true;
+                }
+                return true;
+            }
         }
+        
     }catch(e){
         throw e;
     }
@@ -145,14 +205,38 @@ async function removeMessage(qURL, Message){
 }
 
 /**
- * Returns Stack as an object, sample format below:
+ * Returns Notification as an object, sample format below:
  * StackId='arn:aws:cloudformation:us-west-2:561280630638:stack/teemops-app-20/9945a430-4aa8-11e9-bc57-066b98e74c72'\\nTimestamp='2019-03-20T00:39:26.550Z'\\n...
+ * or if an aws.ec2 event from CloudWatch:
+ * {\"version\":\"0\",\"id\":\"f742f599-0ac8-f18b-6119-cbc72a0a74cd\",\"detail-type\":\"EC2 Instance State-change Notification\",\"source\":\"aws.ec2\",\"account\":\"561280630638\",...
  */
-function getCFNStack(Message) {
-    var newObject = {
-        notifcationType: NOTIFICATION_TYPES.cfn
+function getNotification(Message) {
+    var newObject=getMessageLines(Message);
+
+    //check if newObject is a line separated notification or JSON
+    if(newObject!=undefined){
+        if(newObject.ResourceStatus!=undefined){
+            newObject['notifcationType']= NOTIFICATION_TYPES.cfn;
+        }
+    }else{
+        newObject=JSON.parse(Message);
+        if(newObject.source!=undefined){
+            newObject['notifcationType']= newObject.source;
+        }
+    }
+    
+
+    return newObject;
+}
+
+function getMessageLines(Message){
+    var newObject={
+        topscode: 'teemops'
     };
     var messageLines = Message.split('\n');
+    if(messageLines.length==1){
+        newObject=null;
+    }
     var key, value;
     messageLines.forEach(element => {
         key = element.split('=')[0];
@@ -176,6 +260,10 @@ function getCFNStack(Message) {
  */
 function getAppId(cfnStack) {
     return parseInt(cfnStack.StackName.split('-')[2]);
+}
+
+function getInstanceId(ec2Event){
+
 }
 
 function getCustomerId(cfnStack){
