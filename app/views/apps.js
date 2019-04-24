@@ -13,15 +13,18 @@ config.load('./app/config/config.json');
 var appControlller = require("../../app/controllers/AppController.js");
 var jobController = require("../../app/controllers/JobController.js");
 var eventController = require("../../app/controllers/EventController.js");
+var resourceController=require("../controllers/ResourceController");
 
 var express = require('express');
 var bodyParser = require('body-parser');
+var jmespath=require('jmespath');
 var auth = require("../../app/utils/auth.js");
 
 var router = express.Router();
 var myApps=appControlller();
 var myJobs=jobController();
 var myEvents = eventController();
+var resource=resourceController();
 
 //Body Parser required to use json and other body data sent in request
 //router.use(bodyParser.urlencoded({ extended: false }));
@@ -31,6 +34,7 @@ router.use(auth);
 //Auth middleware for all routes in this view
 myApps.init(config);
 myJobs.init(config);
+resource.init(config);
 
 // define the get route
 router.get('/', function(req, res) {
@@ -330,17 +334,16 @@ router.post('/task/:task?', function(req, res){
  * @usage: request header needs to include
  * GET /<api_base>/apps/infra/<appid>
  */
-router.get('/infra/:id?', function(req, res) {
+router.get('/infra/:id?', async function(req, res) {
     console.log(req.params.id);
     try{
-        myApps.getAppInfra(
-            req.auth_userid,
-            req.params.id,
-            function (outputList){
-                console.log("App Infra Data for appID: "+JSON.stringify(outputList));
-                res.json(outputList);
-            }
-        );
+        var result=await myApps.getAppInfra(req.auth_userid, req.params.id);
+        if(result!=null){
+            res.json({result: result});
+        }else{
+            res.json({error: 'No infrastructure for this app yet.'})
+        }
+
     }catch(e){
         res.json({error:"Processing error"});
         console.log(e);
@@ -364,6 +367,35 @@ router.post('/job/complete', function(req, res){
       }
     }
   );
+});
+/**
+ * request example:
+ * {
+ *      "awsAccountId":"1234556",
+ *      "task": "describeVPCs",
+ *      "params": {},
+ *      "region": "us-west-2"
+ * }
+ */
+router.post('/ec2', async function(req, res){
+    console.log(req.body.id);
+    
+    try{
+        var result=await resource.ec2Task(req.auth_userid, req.body.awsAccountId, req.body.task, req.body.params,req.body.region);
+        if(result!=null){
+            if(req.body.filter!=undefined){
+                result=jmespath.search(result, req.body.filter);
+            }
+            res.json({data: result});
+        }else{
+            res.json({error: 'EC2 Task returned no results'})
+        }
+
+    }catch(e){
+        res.json({error:"Processing error"});
+        console.log(e);
+    }
+    
 });
 
 module.exports = router;

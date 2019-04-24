@@ -84,6 +84,21 @@ module.exports=function(){
                 throw e;
             }
         },
+        getMetaData: async function(appId){
+            var sql="CALL sp_getMetaData(?)";
+            var params=[appId];
+            try{
+                const sqldata=await mydb.getRow(sql, params);
+                if(sqldata.metaData!=undefined){
+                    return sqldata.metaData;
+                }else{
+                    return null;
+                }
+                
+            }catch(e){
+                throw e;
+            }
+        },
         stopApp: async function stopApp(authUserid, appId){
             
             try{
@@ -159,6 +174,44 @@ module.exports=function(){
             }catch(e){
                 throw e;
             }
+        },
+        /**
+         * This can be used as a generic call to a child AWS account using EC2 library
+         * Examples:
+         * var instances=await resource.ec2Task(123, '123456789', 'describeInstances', {InstanceIds:['i-12345678910']}, 'us-west-2');
+         * console.log(JSON.stringify(instances));
+         * 
+         * Can also use jmespath to format output and only display relevant fields/ data etc...
+         * var jmesQuery=jmespath.search(result, "Reservations[ ].Instances[ ]");
+         * 
+         * @param {*} authUserid Authenticated UserId
+         * @param {*} AWSAccountId AWS Account to be queried (must be one that is accessible from this user)
+         * @param {*} task 
+         * @param {*} params 
+         */
+        ec2Task: async function(authUserid, AWSAccountId, task, params, region){
+            var sql='CALL sp_getSTSCredsUserAccount(?, ?)';
+            var sqlParams=[authUserid, AWSAccountId];
+            try{
+                const sqldata=await mydb.getRow(sql, sqlParams);
+                
+                var stsParams={
+                    RoleArn: JSON.parse(sqldata.authData).arn
+                }
+                var creds=await sts.assume(stsParams);
+                //set credentials
+                var event = {
+                    task: task,
+                    params: params,
+                    region: region
+                };
+
+                var result=await ec2(event, creds);
+                return result;
+            }catch(e){
+                throw e;
+            }
+
         }
     }
 };

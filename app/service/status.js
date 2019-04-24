@@ -171,6 +171,18 @@ async function updateStatus(Message){
                         break;
                     case 'running':
                         console.log("Updating App Status to Running");
+                        //update meta data for instance(s)
+                        var metaData=await resource.getMetaData(appId);
+                        if(metaData!=null){
+                            var data=JSON.parse(metaData);
+                            var instance=await resource.describeInstance(appId, instanceId);
+                            data['Instances']=instance;
+                            var updateResult = await myApps.updateMetaData(appId, JSON.stringify(data));
+                            if(updateResult){
+                                console.log("Meta data updated for App");
+                            }
+                        }
+
                         //update App Status
                         var result=await myApps.updateStatusFromNotify(appId, 'cw.running');
                         if(result.error!=undefined){
@@ -224,7 +236,6 @@ function getNotification(Message) {
             newObject['notifcationType']= newObject.source;
         }
     }
-    
 
     return newObject;
 }

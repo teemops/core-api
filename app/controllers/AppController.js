@@ -3,7 +3,7 @@ if (typeof Promise === 'undefined') {
     var await = require('asyncawait/await');
     var Promise = require('bluebird');
 } 
-var config, key, metaS3, defaultS3s;
+var config, key, metaS3, defaultS3s, resource;
 var schemas = require("../../app/models/");
 var appData = require("../../app/drivers/dynamo.js");
 var mysql = require("../../app/drivers/mysql.js");
@@ -11,6 +11,7 @@ var appS3 = require("../../app/drivers/s3.js");
 var ec2=require("../../app/drivers/ec2.js")
 var tNotify = require("../../app/drivers/notify");
 var keyController=require("../../app/controllers/KeyController");
+var resourceController=require("../controllers/ResourceController");
 var util = require('util');
 var _ = require("lodash");
 var mydb= mysql();
@@ -21,7 +22,9 @@ module.exports=function(){
             config=appConfig;
             mydb.init();
             key=keyController(appConfig);
-            metaS3=appS3(config);
+            resource=resourceController();
+            resource.init(appConfig);
+            metaS3=appS3(appConfig);
             defaultS3s=metaS3.getBuckets();
         },
         getAppByIDAuth: function getAppByIDAuth(authUserid, appID, cb){
@@ -388,37 +391,16 @@ module.exports=function(){
                 throw e;
             }
         },
-       /**
-        * Gets the applications or servers infrastructure details which are then
-        * displayed in the infrastructure details.
-        */
-       getAppInfra: function getAppInfra(authUserid, appId, cb){
-
-            metaS3.readitem(
-                appId+".json",
-                defaultS3s.meta,
-                function(err, results) {
-                    if (err) {
-                        console.log(err);
-                      cb({error:"status_error"});
-                      return;
-                    }
-                    
-                    if(results!=null){
-                        //var tempStr = new Buffer(results.Body.toString(), 'base64').toString();
-                        var tempStr = results.Body.toString();
-                        var instance=JSON.parse(tempStr);
-                        var infra=instance.Instances[0];
-                        cb({result:infra});
-                    }else{
-                        cb({error:"view_status_error"});
-                    }
-                }
-
-            );
-
-
-       },
+        /**
+            * Gets the applications or servers infrastructure details which are then
+            * displayed in the infrastructure details.
+            */
+        getAppInfra: async function getAppInfra(authUserid, appId){
+            var metaData=await resource.getMetaData(appId);
+            var data=JSON.parse(metaData);
+            var instances=data.Instances;
+            return instances[0];
+        },
        /**
         * Adds key pair fo given user id and aws config
         * 
