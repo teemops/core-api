@@ -15,6 +15,7 @@ if (typeof Promise === 'undefined') {
 //how long between checking SQS??
 const WAIT_TIME = 20000;
 const NOTIFICATION_TYPES = {
+    discard: "none",
     cfn: "CloudFormation",
     ec2: "aws.ec2",
     rds: "aws.rds"
@@ -118,7 +119,9 @@ if(code===1){
  */
 async function updateStatus(Message){
     var event = getNotification(Message);
-    
+    if(event==null){
+        return true;
+    }
     try{
         if (event.notifcationType==NOTIFICATION_TYPES.cfn){
             var appId=getAppId(event);
@@ -223,6 +226,8 @@ async function removeMessage(qURL, Message){
  * {\"version\":\"0\",\"id\":\"f742f599-0ac8-f18b-6119-cbc72a0a74cd\",\"detail-type\":\"EC2 Instance State-change Notification\",\"source\":\"aws.ec2\",\"account\":\"561280630638\",...
  */
 function getNotification(Message) {
+
+    
     var newObject=getMessageLines(Message);
 
     //check if newObject is a line separated notification or JSON
@@ -231,13 +236,19 @@ function getNotification(Message) {
             newObject['notifcationType']= NOTIFICATION_TYPES.cfn;
         }
     }else{
-        newObject=JSON.parse(Message);
+        try{
+            newObject=JSON.parse(Message);
+        }catch(e){
+            return null;
+        }
         if(newObject.source!=undefined){
             newObject['notifcationType']= newObject.source;
         }
     }
 
     return newObject;
+    
+    
 }
 
 function getMessageLines(Message){

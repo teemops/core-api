@@ -3,14 +3,17 @@ if (typeof Promise === 'undefined') {
     var await = require('asyncawait/await');
     var Promise = require('bluebird');
 } 
-var config, cfn, jobsQName;
+var config, cfn, jobsQName, jobsQRegion, awsAccountId;
 const KEYSTORE_TEMPLATE='s3.keyStore';
 const SNS_TEMPLATE='sns.topic';
 const DEFAULT_CONFIG_PATH='app/config/config.json';
+const CFN_STACK_EXCLUDED_REGIONS=['eu-north-1'];
 var appQ = require("../../app/drivers/sqs.js");
 var kms=require("../../app/drivers/kms");
 var cfnDriver=require("../../app/drivers/cfn");
+var ec2=require("../../app/drivers/ec2");
 var file=require("../../app/drivers/file");
+var jmespath = require('jmespath');
 
 var messageQ=appQ();
 var defaultQs=messageQ.getQs();
@@ -24,6 +27,9 @@ async function init(appConfig){
     config=appConfig;
     cfn=cfnDriver(appConfig);
     jobsQName=config.get("sqs", "jobsq");
+    jobsQRegion=config.get("sqs", "region");
+    awsAccountId=config.get("AWSAccountId");
+
     console.log("appConfig: "+JSON.stringify(appConfig));
     //check Message Queues are setup
     var startQ= await createJobQ();
@@ -74,32 +80,87 @@ async function createKMSKey(){
 }
 
 /**
- * Creates SNS Topic and subscription to Lambda Serverless
- * function that will update status
- * 
+ * Creates SNS Topic and subscription to SQS that will update status
+ * This is done across all 
  */
 async function createSNSTopic(){
+    //get regions first
+    var regionsResult=[], regions, result;
     try{
-        var outputResults=await cfn.getOutputs('teemops-snstopic');
+        regionsResult=await ec2({
+            task:'describeRegions',
+            params: null,
+            region: 'us-west-2'
+        });
+        
+        /**
+         * Filter out regions that aren't able to be used for stack sets currently
+         * TODO: At moment eu-north-1 is not able to be supported so we need to just create individual stack for this in that region not tied to
+         * any Stack Set.
+         */
+        regions=jmespath.search(regionsResult, "Regions[*].RegionName");
+        CFN_STACK_EXCLUDED_REGIONS.forEach(
+            function(value){
+                regions=regions.filter(region=>region!=value);
+            }
+        );
+        
+        
+    }catch(e){
+        throw e;
+    }
+    // regions=['us-west-2', 'ap-southeast-2'];
+    // try{
+    //     var deleteStackResult=await cfn.deleteInstances('snstopic', [awsAccountId], regions);
+    //     if(deleteStackResult){
+    //         console.log("deleted stack set for SNS Topics");
+    //     }
+    // }catch(e){
+        
+    // }
+    
+    try{
+        
+        var checkTopicsExist=await cfn.checkStackSetExists('teemops-snstopic');
+        if(checkTopicsExist){
+            result=checkTopicsExist;
+        }else{
+            var params={
+                SQSLabel: jobsQName,
+                SQSRegion: jobsQRegion
+            }
+            result=await cfn.createSet('snstopic', SNS_TEMPLATE, params);
+            
+            stackResult=await cfn.createInstances('snstopic', [awsAccountId], regions);
+            if(stackResult){
+                //now create single Stack for excluded region(s)
+                //this will wait for each region to complete
+                CFN_STACK_EXCLUDED_REGIONS.forEach(async function(value){
+                    console.log("Setup: adding SNS Topic to region: "+value);
+                    await createSNSTopicSingle(value);
+                });
+            }
+        }
+        return true;
+    }catch(e){
+        throw e;
+    }
+}
+
+async function createSNSTopicSingle(region){
+    try{
+        var regionCFN=cfn;
+        regionCFN.setRegion(region);
+        var outputResults=await regionCFN.getOutputs('teemops-snstopic');
         var result;
         if(outputResults!=null && outputResults[0].OutputKey=='TopicArn'){
             result=outputResults[0].OutputValue;
         }else{
-            var params={
-                SQSLabel: jobsQName
-            }
-            result=await cfn.create('snstopic', SNS_TEMPLATE, params, true, false, false);
-            outputResults=await cfn.getOutputs('teemops-snstopic');
-            if(outputResults!=null && outputResults[0].OutputKey=='TopicArn'){
-                result=outputResults[0].OutputValue;
-            }
+            result=await regionCFN.create('snstopic', SNS_TEMPLATE, null, true, false, false);
         }
-        
-        const updateConfig=file.updateConfig('SNS', result, DEFAULT_CONFIG_PATH);
 
-        return true;
     }catch(e){
-        return e;
+        throw e;
     }
 }
 

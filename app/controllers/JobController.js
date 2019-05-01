@@ -42,7 +42,7 @@ module.exports=function(){
             var sql="CALL sp_getAppByUserID(?,?)";
             var params = [authUserid,data.appid];
             const KEYSTORE_TEMPLATE=data.task;
-
+            var cfnLaunch=cfn;
             try{
                 const sqldata=await mydb.getRow(sql, params);
                 
@@ -51,14 +51,14 @@ module.exports=function(){
                 }
                 var creds=await sts.assume(stsParams);
                 //set credentials
-                cfn.creds(sqldata.region, creds);
-                var outputResults=await cfn.getOutputs(CFN_APP_LABEL+data.appid);
+                cfnLaunch.creds(sqldata.region, creds);
+                var outputResults=await cfnLaunch.getOutputs(CFN_APP_LABEL+data.appid);
                 var result;
                 if(outputResults!=null && outputResults[0].OutputKey=='InstanceId'){
                     result=outputResults[0].OutputValue;
                 }else{
                     var cfnParams=this.ec2Params(sqldata);
-                    result=await cfn.create(CFN_APP_LABEL+data.appid, KEYSTORE_TEMPLATE, cfnParams, false, true);
+                    result=await cfnLaunch.create(CFN_APP_LABEL+data.appid, KEYSTORE_TEMPLATE, cfnParams, false, true);
                 }
                 return result;
             }catch(e){

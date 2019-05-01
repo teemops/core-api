@@ -14,10 +14,8 @@ function Task(awsObject, task, params=null){
     return new Promise(function(resolve, reject){
         awsObject[task](params, function(err, data){
             if(err){
-                console.log("Error " +err);
                 reject(err);
             }else{
-                console.log("Data: "+data);
                 resolve(data);
             }
         });

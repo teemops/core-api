@@ -121,6 +121,7 @@ module.exports=function(){
          * @returns: success or err
          */
         addQ: function addQ(qName, callback){
+
             var params = {
                 QueueName: qName
             };

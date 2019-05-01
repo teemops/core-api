@@ -5,9 +5,15 @@ Parameters:
     Type: String
     Description: 'Teemops SQS Label'
     Default: 'teemops_main'
+  SQSRegion:
+    Type: String
+    Description: 'Teemops SQS Region'
+    Default: 'us-west-2'
 Resources:
   TopsSNS:
     Type: AWS::SNS::Topic
+    Properties:
+      TopicName: 'teemops-sns'
   TopsSNSPolicy:
     DependsOn: TopsSNS
     Type: AWS::SNS::TopicPolicy
@@ -21,15 +27,15 @@ Resources:
           Principal:
             AWS: "*"
           Action:
-          - SNS:Publish
-          - SNS:RemovePermission
-          - SNS:SetTopicAttributes
-          - SNS:DeleteTopic
-          - SNS:ListSubscriptionsByTopic
-          - SNS:GetTopicAttributes
-          - SNS:Receive
-          - SNS:AddPermission
-          - SNS:Subscribe
+          - sns:Publish
+          - sns:RemovePermission
+          - sns:SetTopicAttributes
+          - sns:DeleteTopic
+          - sns:ListSubscriptionsByTopic
+          - sns:GetTopicAttributes
+          - sns:Receive
+          - sns:AddPermission
+          - sns:Subscribe
           Resource: "*"
           Condition:
               StringEquals:
@@ -50,7 +56,9 @@ Resources:
       Endpoint: 
         Fn::Join:
           - ''
-          - - 'arn:aws:sqs:us-west-2:'
+          - - 'arn:aws:sqs:'
+            - !Ref SQSRegion
+            - ':'
             - !Ref 'AWS::AccountId'
             - ':'
             - !Ref SQSLabel
@@ -61,21 +69,38 @@ Resources:
       Queues:
         - Fn::Join:
           - ''
-          - - 'https://sqs.us-west-2.amazonaws.com/'
+          - - 'https://sqs.'
+            - !Ref SQSRegion
+            - '.amazonaws.com/'
             - !Ref 'AWS::AccountId'
             - '/'
             - !Ref SQSLabel
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-        - Sid: allow-sns-tops
+        - Sid: allow-sns-topsa
           Effect: Allow
           Principal: "*"
           Action:
-          - sqs:SendMessage
+          - SQS:SendMessage
+          - SQS:ReceiveMessage
+          Resource:
+            - Fn::Join:
+              - ''
+              - - 'arn:aws:sqs:'
+                - !Ref SQSRegion
+                - ':'
+                - !Ref 'AWS::AccountId'
+                - ':'
+                - !Ref SQSLabel
           Condition:
-            ArnEquals:
-              'aws:SourceArn': !Ref TopsSNS
+            ArnLike:
+              'aws:SourceArn':
+                - Fn::Join:
+                  - ''
+                  - - 'arn:aws:sns:*:'
+                    - !Ref 'AWS::AccountId'
+                    - ':teemops-sns'
 Outputs:
   TopicArn:
     Description: Teemops SNS Topic

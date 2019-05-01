@@ -81,7 +81,7 @@ router.post('/update', async function(req, res) {
     console.log(req.auth_userid);
     const output=await myApps.updateApp(req.auth_userid, req.body);
     console.log("All apps for given user ID: "+output);
-    res.json(output);
+    res.json({result:output});
 
 });
 

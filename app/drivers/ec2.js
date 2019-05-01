@@ -14,14 +14,20 @@ var jms = require('jmespath');
 var config = require('config-json');
 config.load('./app/config/config.json');
 
-async function ec2RunTask(event, credentials) {
+async function ec2RunTask(event, credentials=null) {
     console.log("Credentials in EC2 lib: "+credentials);
-    AWSEC2.config.update({
+    if(credentials!=null){
+      AWSEC2.config.update({
         accessKeyId:credentials.accessKeyId,
         secretAccessKey:credentials.secretAccessKey,
         sessionToken:credentials.sessionToken,
         region:event.region
-    });
+      });
+    }else{
+      AWSEC2.config.update({
+        region: event.region
+      });
+    }
     var ec2Client=new AWSEC2.EC2();
     var params=event.params;
     console.log("EC2 Task Parameters: "+ JSON.stringify(params));
