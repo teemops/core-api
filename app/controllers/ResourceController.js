@@ -9,6 +9,7 @@ const CFN_APP_LABEL='app-';
 var cfnDriver=require("../../app/drivers/cfn");
 var stsDriver=require("../../app/drivers/sts");
 var ec2=require("../../app/drivers/ec2");
+var price=require("../../app/drivers/pricing");
 var appQ = require("../../app/drivers/sqs.js");
 var mysql = require("../../app/drivers/mysql.js");
 var jmespath = require('jmespath');
@@ -207,6 +208,30 @@ module.exports=function(){
                 };
 
                 var result=await ec2(event, creds);
+                return result;
+            }catch(e){
+                throw e;
+            }
+
+        },
+        priceTask: async function(authUserid, AWSAccountId, task, params, region){
+            // var sql='CALL sp_getSTSCredsUserAccount(?, ?)';
+            // var sqlParams=[authUserid, AWSAccountId];
+            try{
+                // const sqldata=await mydb.getRow(sql, sqlParams);
+                
+                // var stsParams={
+                //     RoleArn: JSON.parse(sqldata.authData).arn
+                // }
+                // var creds=await sts.assume(stsParams);
+                //set credentials
+                var event = {
+                    task: task,
+                    params: params,
+                    region: 'ap-south-1'
+                };
+
+                var result=await price(event);
                 return result;
             }catch(e){
                 throw e;

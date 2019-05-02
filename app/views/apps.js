@@ -398,4 +398,34 @@ router.post('/ec2', async function(req, res){
     
 });
 
+/**
+ * request example:
+ * {
+ *      "awsAccountId":"1234556",
+ *      "task": "describeServices",
+ *      "params": {},
+ *      "region": "us-west-2"
+ * }
+ */
+router.post('/pricing', async function(req, res){
+    console.log(req.body.id);
+    
+    try{
+        var result=await resource.priceTask(req.auth_userid, req.body.awsAccountId, req.body.task, req.body.params,req.body.region);
+        if(result!=null){
+            if(req.body.filter!=undefined){
+                result=jmespath.search(result, req.body.filter);
+            }
+            res.json({data: result});
+        }else{
+            res.json({error: 'Pricing Task returned no results'})
+        }
+
+    }catch(e){
+        res.json({error:"Processing error"});
+        console.log(e);
+    }
+    
+});
+
 module.exports = router;
