@@ -99,11 +99,11 @@ module.exports=function(){
                             }
                         }
                         else{
-                            cb(null, false);
+                            cb(null, {status: false});
                         }
 
                     }else{
-                        cb(null);
+                        cb(null, {status: false});
                     }
                 }
             );

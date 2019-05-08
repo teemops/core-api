@@ -24,6 +24,12 @@
         {
             "type": "node",
             "request": "launch",
+            "name": "Pricing Service",
+            "program": "${workspaceFolder}/app/service/pricing.js"
+        },
+        {
+            "type": "node",
+            "request": "launch",
             "name": "Test Setup Script",
             "program": "${workspaceFolder}/scripts/setup.js",
             "runtimeArgs": [

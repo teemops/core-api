@@ -107,6 +107,34 @@ module.exports=function(){
             });
 
         },
+        /**
+         * @author: Ben Fellows <ben@teemops.com>
+         * @description: INSERT query
+         * @usage:  data should include SQL string
+         * parameters
+         * @returns: Insert ID of new ID
+         */
+        insertPromise: function insertPromise(sqlstring, params){
+
+            return new Promise(function(resolve, reject){
+                    pool.query(sqlstring, params, function(err, result) {
+ 
+                        if (!err){
+        
+                            if (result.insertId>0) {
+                                resolve(result.insertId);
+                            }else{
+                                reject("Object wasn't inserted");
+                            }
+                        }else{
+                            console.log('Error while performing Query.');
+                            reject(err);
+                        }
+                    });
+                
+            });
+ 
+         },
 
         /**
          * @author: Sarah Ruane <sarah@teem.nz>
@@ -134,6 +162,34 @@ module.exports=function(){
             });
 
         },
+        /**
+         * @author: Ben Fellows
+         * @description: INSERT query for stored proc
+         * @usage:  data should include SQL string
+         * parameters
+         * @returns: Insert ID of new ID
+         */
+        insertSPPromise: function (sqlstring, params){
+            return new Promise(function(resolve, reject){
+                pool.query(sqlstring, params, function(err, result) {
+ 
+                    if (!err){
+    
+                        var strResult = JSON.stringify(result[0][0]);
+                        var jsonResult = JSON.parse(strResult);
+    
+                        if (jsonResult.insertId>0) {
+                            resolve(jsonResult.insertId);
+                        }
+                    }else{
+                        console.log('Error while performing Query.');
+                        reject(err);
+                    }
+                });
+            });
+            
+ 
+         },
         /**
          * @author: Ben Fellows <ben@teemops.com>
          * @description: UPDATE query

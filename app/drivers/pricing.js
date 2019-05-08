@@ -30,15 +30,13 @@ async function pricingRunTask(event, credentials=null) {
     }
     var pricingClient=new AWSPrice.Pricing();
     var params=event.params;
-    console.log("Pricing Task Parameters: "+ JSON.stringify(params));
     return new Promise(function(resolve, reject){
         pricingClient[event.task](params, function(err, data) {
-            console.log("Starting callback of pricing task"+event.task);
             if (err) {
                 console.log("Inside Error"+JSON.stringify(err));
               reject(err);
             }else{
-                console.log("Data from pricing"+ event.task+" "+data);
+                
               if (data.length!==0) {
                 //var output=jms.search(data, "Vpcs[].{ID: VpcId, IPRange: CidrBlock, Tags: Tags[*]}");
                 resolve(data);
