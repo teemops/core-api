@@ -1,11 +1,17 @@
+if (typeof Promise === 'undefined') {
+  var async = require('asyncawait/async');
+  var await = require('asyncawait/await');
+  var Promise = require('bluebird');
+} 
 var userCloudConfigController = require("../../app/controllers/UserCloudConfigController.js");
+var pricingController=require("../../app/controllers/PricingController");
 var auth = require("../../app/utils/auth.js");
 var bodyParser = require('body-parser');
 var express = require('express');
 
 var router = express.Router();
 var userCloudConfig=userCloudConfigController();
-
+var pricing=pricingController();
 router.use(bodyParser.json());
 router.use(auth);
 
@@ -88,6 +94,15 @@ router.delete('/:params', function(req, res) {
     }
 });
 
+
+router.post('/instance_types', async function(req, res) {
+  if(req.body.region!=undefined){
+    var types=await pricing.getInstanceTypes(req.body.region);
+    res.json({data: types});
+  }
+
+});
+
 /**
  * @author: Sarah Ruane
  * @description: update user's aws config (authenticated)
@@ -117,6 +132,7 @@ router.post('/', function(req, res) {
       res.json({error: "Not authorised"});
     }
 });
+
 
 
 module.exports = router;
