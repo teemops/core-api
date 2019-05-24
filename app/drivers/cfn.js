@@ -19,13 +19,15 @@ function init (appConfig) {
     awsAccountId=config.get("AWSAccountId");
     return {
         create: createStack,
+        delete: deleteStack,
         getOutputs: getStackOutputs,
         creds: useSTSCredentials,
         createSet: createStackSet,
         checkStackSetExists:checkStackSetExists,
         createInstances:createStackSetInstances,
         deleteInstances:deleteStackSetInstances,
-        setRegion:setRegion
+        setRegion:setRegion,
+        task: cfnTask
     }
 }
 
@@ -97,7 +99,10 @@ async function createStack(label, templateName, parameters=null, wait=false, url
             var params = {
                 StackName: stackName,
                 TemplateURL: template,
-                Parameters: getParams(parameters)
+                Parameters: getParams(parameters),
+                Capabilities: [
+                    'CAPABILITY_IAM'
+                ]
             };
         }else{
             const templateBody=await file.read("cloudformation/"+templateName+".cfn.yaml");
@@ -105,7 +110,10 @@ async function createStack(label, templateName, parameters=null, wait=false, url
             var params = {
                 StackName: stackName,
                 TemplateBody: templateBody,
-                Parameters: getParams(parameters)
+                Parameters: getParams(parameters),
+                Capabilities: [
+                    'CAPABILITY_IAM'
+                ]
             };
         }
         var notifyARN='arn:aws:sns:'+cfn.config.region+':'+awsAccountId+':'+snsTopicName;
@@ -127,6 +135,36 @@ async function createStack(label, templateName, parameters=null, wait=false, url
             const waitResult=await checkStackStatus(stackName);
             return waitResult;
         }
+        throw e;
+    }
+}
+
+/**
+ * Deletes a CloudFormation stack and optionally waits for DELETE_COMPLETE state 
+ * before returning a result.
+ * 
+ * @param {*} label 
+ * @param {*} wait 
+ */
+async function deleteStack(label, wait=false){
+    try{
+
+        var stackName="teemops-"+label;
+        
+        var params = {
+            StackName: stackName
+        };
+        const result=await cfnTask('deleteStack', params);
+        
+        if(wait){
+            //await sleep(2000);
+            const waitResult=await checkStackStatus(stackName);
+            return waitResult;
+        }else{
+            return result;
+        }
+        
+    }catch(e){
         throw e;
     }
 }
@@ -335,12 +373,20 @@ async function checkStackStatus(stackName){
     var params={
         StackName: stackName
     }
-    const wait=await waitFor('stackCreateComplete', params);
-    if(wait.StackStatus==STATE_COMPLETED){
-        if(wait.Stacks[0].Outputs[0].OutputKey=='BucketName'){
-            return wait.Stacks[0].Outputs[0].OutputValue;
+    try{
+        const wait=await waitFor('stackCreateComplete', params);
+        if(wait.StackStatus==STATE_COMPLETED){
+            if(wait.Stacks[0].Outputs[0].OutputKey=='BucketName'){
+                return wait.Stacks[0].Outputs[0].OutputValue;
+            }
         }
+    }catch(e){
+        if(e.code=="ResourceNotReady"){
+            return true;
+        }
+        throw e;
     }
+    
 }
 /**
  * Converts an object to an Array of CloudFormation compatible

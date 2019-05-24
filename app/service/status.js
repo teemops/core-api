@@ -13,7 +13,7 @@ if (typeof Promise === 'undefined') {
     var Promise = require('bluebird');
 } 
 //how long between checking SQS??
-const WAIT_TIME = 20000;
+const WAIT_TIME = 500;
 const NOTIFICATION_TYPES = {
     discard: "none",
     cfn: "CloudFormation",
@@ -44,6 +44,7 @@ var util  = require('util'),
     spawn = require('child_process').spawn;
 
 var config = require('config-json');
+var log=require('../drivers/log.js');
 config.load('./app/config/config.json');
 var appQ = require("../../app/drivers/sqs.js");
 var userController = require("../controllers/UserController.js"); 
@@ -61,47 +62,62 @@ console.log('Running status service... Ctrl-C to stop. Use supervisor to run as 
 console.log(defaultQs.jobsq + " is the default JOBS Q");
 
 var code=0;
+var qURL;
 
-const myService=async function service(){
-    const qURL=await jobQ.readQURL(defaultQs.jobsq);
-    console.log(qURL);
-    while(code==0){
-        //get QURL
-        try{
-            const message=await jobQ.readitem(qURL);
-            console.log(JSON.stringify(message));
-            if(message.Messages!=undefined){
-                message.Messages.forEach(async function (value, key) {
-                    var msgBody = JSON.parse(value.Body.toString());
-    
-                    if (msgBody.Type != "Notification") {
-                        err = "This function only supports notification events.";
-                        throw err;
-                    }
-    
-                    const statusResult=await updateStatus(msgBody.Message);
-                    if(statusResult){
-                        const removeResult=await removeMessage(qURL, value);
-                        if(removeResult){
-                            console.log('Processed MessageId '+ message.Messages[key].MessageId);
-                        }
-                    }
-                    await waiting(5000);
-                });
-                
-            }else{
-                //await
-                await waiting(WAIT_TIME);
-            }
-            
-        }catch(e){
-            console.log("Error: "+e);
-            throw e;
-        }
+const start=async function(){
+    try{
+        qURL=await jobQ.readQURL(defaultQs.jobsq);
+    }catch(e){
+        throw e;
     }
     
+    myService();
 }
-myService();
+start();
+
+const myService=async function service(){
+
+    try{
+        const message=await jobQ.readitem(qURL, 10);
+        if(message.Messages!=undefined){
+            log.out(0, "Processing messages from Queue...", log.LOG_TYPES.INFO);
+            var value=message.Messages[0];
+            var key=0;
+            message.Messages.forEach(async function (value, key) {
+                var msgBody = JSON.parse(value.Body.toString());
+
+                if (msgBody.Type != "Notification") {
+                    err = "This function only supports notification events.";
+                    throw err;
+                }
+
+                const statusResult=await updateStatus(msgBody.Message);
+                if(statusResult){
+                    const removeResult=await removeMessage(qURL, value);
+                    if(removeResult){
+                        console.log('PROCESSED MessageId '+ message.Messages[key].MessageId);
+                    }
+                }else{
+                    const removeResult=await removeMessage(qURL, value);
+                    if(removeResult){
+                        console.log('ERROR: PURGED MessageId '+ message.Messages[key].MessageId);
+                    }
+                }
+            });
+            
+        }else{
+            log.out(404, "No messages to process yet...", log.LOG_TYPES.INFO);
+        }
+        
+    }catch(e){
+        console.log("Error: "+e);
+        throw e;
+    }
+    myService();
+    await waiting(WAIT_TIME);
+    
+}
+
 
 function waiting(ms){
     return new Promise(resolve=>setTimeout(resolve, ms));
@@ -146,9 +162,18 @@ async function updateStatus(Message){
                 //do nothing if PROGRESS except return true so we can discard the message
                 return true;
             } else if (event.ResourceStatus.toString().indexOf('DELETE_COMPLETE')>=0 && event.ResourceType.toString().indexOf('Stack')>=0) {
-                console.log("DELETING App");
+                console.log("DELETED App");
                 //update App Status
                 var result = await myApps.updateStatusFromNotify(appId, 'cfn.delete');
+                if(result.error!=undefined){
+                    throw result.error;
+                }
+                return true;
+            } else if (event.ResourceStatus.toString().indexOf('CREATE_FAILED')>=0 && event.LogicalResourceId.toString() === 'TopsEc2'){
+                console.log("Instance launch failure due to AWS CloudFormation Error");
+                var data=JSON.parse(event.ResourceProperties);
+                //update App Status
+                var result = await myApps.updateStatusFromNotify(appId, 'cfn.fail', event.ResourceStatusReason);
                 if(result.error!=undefined){
                     throw result.error;
                 }
@@ -163,6 +188,13 @@ async function updateStatus(Message){
                 var instanceId=event.detail['instance-id'];
                 var awsAccountId=event.account;
                 var appId=await resource.getAppIdFromMeta(instanceId, awsAccountId);
+                if(appId==null){
+                    var error={
+                        code: 404,
+                        message: 'AppId is not able to be located, because it is either already deleted or not connected to an Instance in AWS.'
+                    };
+                    throw error;
+                }
                 switch(event.detail['state']){
                     case 'stopped':
                         console.log("Updating App Status to Stopped");
@@ -200,6 +232,11 @@ async function updateStatus(Message){
         }
         
     }catch(e){
+        if(e.code==404){
+            //we assume this App/Instance has already been processed and/or since deleted.
+            log.out(e.code, e.message, log.LOG_TYPES.WARNING)
+            return true;
+        }
         throw e;
     }
 }

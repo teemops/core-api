@@ -176,31 +176,67 @@ router.get('/search/:q?', function(req, res) {
 });
 
 /**
+ * @author: Ben Fellows <ben@teemops.com>
+ * @description: TERMINATES an APP _this terminates instances (But doesn't delete the app record)
+ * @usage: request data should include ID of app and query string ?archive=true/false
+ */
+router.delete('/terminate/:id', async function(req, res) {
+
+    var archive = req.query.archive !== 'false';
+    var appId = req.params.id;
+    var userId = req.auth_userid;
+
+    //TODO Call AWS to archive app (hasn't been done yet - creates an AMI).
+
+    try{
+        const jobData=await myJobs.deleteApp(userId, appId);
+        console.log("Queue data: "+jobData);
+        const response=await myApps.updateAppStatus(userId, appId, 'cfn.delete');
+    
+        if(response && !response.error){
+            console.log("Status "+ response);
+            //myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
+            res.json({status: response});
+        }else{
+            throw "Unkown error in DELETE/:id calling updateAppStatus";
+        }
+    }catch(e){
+        res.json({status: "Error adding a job."});
+    }
+
+});
+
+/**
  * @author: Sarah Ruane <sarah@teem.nz>
  * @description: deletes or archives an app
  * @usage: request data should include ID of app and query string ?archive=true/false
  */
-router.delete('/:id', function(req, res) {
+router.delete('/:id', async function(req, res) {
 
-  var archive = req.query.archive !== 'false';
-  var appId = req.params.id;
-  var userId = req.auth_userid;
+    var appId = req.params.id;
+    var userId = req.auth_userid;
 
-  var status = archive
-    ? 8   //Archived
-    : 7;  //Deleted
+    //TODO Call AWS to archive app (hasn't been done yet - creates an AMI).
 
-  myApps.updateAppStatus(userId, appId, status,
-    function(response){
-
-        if(response.result && !response.error){
-            res.json({ success: true });
+    try{
+        const jobData=await myJobs.deleteApp(userId, appId);
+        console.log("Queue data: "+jobData);
+        const response=await myApps.updateAppStatus(userId, appId, 'cfn.delete');
+    
+        if(response && !response.error){
+            console.log("Status "+ response);
+            //myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
+            res.json({status: response});
+        }else{
+            throw "Unkown error in DELETE/:id calling updateAppStatus";
         }
-    });
-
-  //Call AWS to archive app
+    }catch(e){
+        res.json({status: "Error adding a job."});
+    }
 
 });
+
+
 
 
 /**
@@ -226,18 +262,14 @@ router.put('/job', async function(req, res) {
             const jobData=await myJobs.task(req.auth_userid,adddata);
             console.log("Queue data: "+jobData);
             if(jobData){
-                myApps.updateAppStatus(req.auth_userid, adddata.appid, adddata.action,
-                    function(response){
-        
-                        if(response && !response.error){
-                            console.log("Status "+ response);
-                            //myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
-                            res.json({status: response});
-                        }else{
-        
-                        }
-                    }
-                );
+                const response=await myApps.updateAppStatus(req.auth_userid, adddata.appid, adddata.action);
+                if(response && !response.error){
+                    console.log("Status "+ response);
+                    //myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
+                    res.json({status: response});
+                }else{
+
+                }
             }
             
         }catch(e){
@@ -268,18 +300,15 @@ router.post('/launch', async function(req, res) {
         try{
             const jobData=await myJobs.launchApp(req.auth_userid,adddata);
             console.log("Queue data: "+jobData);
-            myApps.updateAppStatus(req.auth_userid, req.body.appid, adddata.action,
-                function(response){
-    
-                    if(response && !response.error){
-                        console.log("Status "+ response);
-                        //myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
-                        res.json({status: response});
-                    }else{
-    
-                    }
-                }
-            );
+            const response=await myApps.updateAppStatus(req.auth_userid, req.body.appid, adddata.action);
+        
+            if(response && !response.error){
+                console.log("Status "+ response);
+                //myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
+                res.json({status: response});
+            }else{
+                throw "Unkown error in updateAppStatus";
+            }
         }catch(e){
             res.json({status: "Error adding a job."});
         }
@@ -293,7 +322,7 @@ router.post('/launch', async function(req, res) {
  *  action: teem.clone
  * }
  */
-router.post('/task/:task?', function(req, res){
+router.post('/task/:task?', async function(req, res){
     var taskData={
         userid: req.auth_userid, 
         appid: req.body.appid, 
@@ -306,19 +335,14 @@ router.post('/task/:task?', function(req, res){
         myJobs.addJob(
             req.auth_userid,
             taskData,
-            function (jobdata){
+            async function (jobdata){
                 console.log("Queue data: "+jobdata);
-                
-                myApps.updateAppStatus(req.auth_userid, req.body.appid, adddata.action,
-                function(response){
-
-                    if(response && !response.error){
-                        console.log("Status "+ response);
-                        //myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
-                        res.json({status:response.result});
-                    }
+                const response=await myApps.updateAppStatus(req.auth_userid, req.body.appid, adddata.action);
+                if(response && !response.error){
+                    console.log("Status "+ response);
+                    //myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
+                    res.json({status:response.result});
                 }
-                );
             }
         );
     }else{
@@ -352,21 +376,18 @@ router.get('/infra/:id?', async function(req, res) {
 
 });
 
-router.post('/job/complete', function(req, res){
+router.post('/job/complete', async function(req, res){
 
   var status = req.body.type === 'start'
       ? 3 //started
       : 5; //stopped
 
-  myApps.updateAppStatus(req.body.userid, req.body.appid, status,
-    function(response){
+    const response=await myApps.updateAppStatus(req.body.userid, req.body.appid, status);
 
-      if(response.result && !response.error){
+    if(response.result && !response.error){
         myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
         res.json({ status: status});
-      }
     }
-  );
 });
 /**
  * request example:

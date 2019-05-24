@@ -10,7 +10,8 @@ if (typeof Promise === 'undefined') {
     var Promise = require('bluebird');
 } 
 config.load('./app/config/config.json');
-
+const DEFAULT_SQS_VIS_TIMEOUT=30;
+const DEFAULT_SQS_WAIT_TIMEOUT=20;
 var ep = new AWS.Endpoint(config.get("sqs", "endpoint"));
 var sqs = new AWS.SQS({endpoint: ep, region: config.get("sqs", "region")});
 var Queues={jobsq: config.get("sqs", "jobsq"), notifyq: "notify_all"};
@@ -147,13 +148,12 @@ module.exports=function(){
          * TODO: Rename to readitems and create another function that retrieves only 1 message.
          * @returns: success or err
          */
-        readitem: function readitem(qURL){
-            console.log("DEBUG QName"+qURL);
+        readitem: function readitem(qURL, maxNumMessages=null){
             var qParams = {
                 QueueUrl: qURL, /* required */
-                MaxNumberOfMessages: 1,
-                VisibilityTimeout: 0,
-                WaitTimeSeconds: 0
+                MaxNumberOfMessages: (maxNumMessages ? maxNumMessages : 1),
+                VisibilityTimeout: DEFAULT_SQS_VIS_TIMEOUT,
+                WaitTimeSeconds: DEFAULT_SQS_WAIT_TIMEOUT
             };
             return new Promise(function(resolve, reject) {
                 sqs.receiveMessage(

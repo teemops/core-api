@@ -140,7 +140,6 @@ module.exports=function(){
          * resource to select apps based on user
          */
         getAppList: function getAppList(authUserid, cb){
-
             var sql = "CALL sp_getAppListByUserID(?);";
 
             var params = [authUserid];
@@ -301,9 +300,15 @@ module.exports=function(){
          * Refer to mysql table job_type which has a list of valid actions
          * Also refer to app_status table for valid status names
          */
-        updateAppStatus: function updateApp(authUserid, appId, action){
-            var sql = "UPDATE app SET status=(select newstatus from job_type where action=?) where id=? and userid=?";
-            var params = [action, appId, authUserid];
+        updateAppStatus: function updateApp(authUserid, appId, action, notify=null){
+            if(notify!=null){
+                var sql = "UPDATE app SET status=(select newstatus from job_type where action=?), notify=? where id=? and userid=?";
+                var params = [action, notify, appId, authUserid];
+            }else{
+                var sql = "UPDATE app SET status=(select newstatus from job_type where action=?), notify=NULL where id=? and userid=?";
+                var params = [action, appId, authUserid];
+            }
+            
             return new Promise(function(resolve, reject){
                     //insert query with sql, parameters and retrun results or error through callback function
                     mydb.update(
@@ -317,6 +322,9 @@ module.exports=function(){
                                 switch(action) {
                                     case 'cfn.create':
                                         status=3;
+                                        break;
+                                    case 'cfn.delete':
+                                        status=9;
                                         break;
                                     case 'cw.stopped':
                                         status=5;
@@ -362,12 +370,16 @@ module.exports=function(){
         * @param {*} appId 
         * @param {*} action 
         */
-       updateStatusFromNotify: async function updateStatusFromNotify(appId, action){
+       updateStatusFromNotify: async function updateStatusFromNotify(appId, action, reason=null){
             try{
-                
+                var statusUpdate;
                 const userId=await this.getUserFromAppId(appId);
-
-                const statusUpdate=await this.updateAppStatus(userId, appId, action);
+                if(reason!=null){
+                     statusUpdate=await this.updateAppStatus(userId, appId, action, reason);
+                }else{
+                    statusUpdate=await this.updateAppStatus(userId, appId, action);
+                }
+                
                 return statusUpdate;
             }catch(e){
                 throw e;

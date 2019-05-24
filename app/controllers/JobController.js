@@ -83,8 +83,25 @@ module.exports=function(){
                 throw e;
             }
         },
-        deleteApp: async function deleteApp(appId){
+        deleteApp: async function deleteApp(authUserid, appId){
+            var sql="CALL sp_getAppByUserID(?,?)";
+            var params = [authUserid,appId];
+            var cfnLaunch=cfn;
+            try{
+                const sqldata=await mydb.getRow(sql, params);
+                
+                var stsParams={
+                    RoleArn: JSON.parse(sqldata.authData).arn
+                }
+                var creds=await sts.assume(stsParams);
 
+                //set credentials
+                cfnLaunch.creds(sqldata.region, creds);
+                var result=await cfnLaunch.delete(CFN_APP_LABEL+appId);
+                return result;
+            }catch(e){
+                throw e;
+            }
         },
         rebootApp: async function rebootApp(appId){
 

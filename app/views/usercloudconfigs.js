@@ -40,23 +40,14 @@ router.get('/listByUserId/:userId?', function(req, res) {
  * @usage: name, userId, userCloudProviderId, vpc, appSubnet, appSecurityGroup, appInstanceType, customData, region
  * PUT /<api_base>/usercloudconfigs
  */
-router.put('/', function(req, res) {
-
-    userCloudConfig.addAWSConfig(req.body,
-      function (err, result){
-
-        console.log(result);
-
-        if(err) {
-          res.json(err);
-        }
-        else {
-
-          res.json(result);
-        }
-      });
+router.put('/', async function(req, res) {
+  try{
+    var result=await userCloudConfig.addAWSConfig(req.body);
+    res.json({id: result});
+  }catch(e){
+    res.json({error:e});
+  }
 });
-
 
 /**
  * @author: Sarah Ruane

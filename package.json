@@ -9,7 +9,6 @@
     "tsc": "tsc"
   },
   "dependencies": {
-    "asyncawait": "",
     "aws-sdk": "^2.387.0",
     "body-parser": "^1.18.3",
     "config-json": "^1.0.0",

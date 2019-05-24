@@ -1,9 +1,22 @@
+if (typeof Promise === 'undefined') {
+    var async = require('asyncawait/async');
+    var await = require('asyncawait/await');
+    var Promise = require('bluebird');
+} 
+
+var config = require('config-json');
+config.load('./app/config/config.json');
+const CW_EVENTS_TEMPLATE='cw.notify.child.account';
 var mysql = require("../../app/drivers/mysql.js");
+var cfnDriver=require("../../app/drivers/cfn");
+var stsDriver=require("../../app/drivers/sts");
 var mydb= mysql();
+var cfn=cfnDriver(config);
+var sts=stsDriver(config);
+var awsAccountId=config.get("AWSAccountId");
 
 module.exports=function(){
     return {
-
       getAWSConfigsByUserId: function (authUserId, cb){
           var sql="CALL sp_getAWSConfigsByUserId(?)";
           var params = [authUserId];
@@ -29,9 +42,23 @@ module.exports=function(){
           name, userId, userCloudProviderId, vpc, appSubnet,
           appSecurityGroup, appInstanceType, customData, region
       */
-      addAWSConfig: function (data, cb){
+      addAWSConfig: async function (data){
 
-        console.log(data);
+        var sql='CALL sp_getSTSCredsUserAccount(?, ?)';
+        var sqlParams=[data.userId, data.userCloudProviderId];
+        try{
+            const sqldata=await mydb.getRow(sql, sqlParams);
+            
+            var stsParams={
+                RoleArn: JSON.parse(sqldata.authData).arn
+            }
+            var creds=await sts.assume(stsParams);
+            //set credentials
+            cfn.creds(data.region,creds);
+            
+        }catch(e){
+            throw e;
+        }
 
         var sql = "CALL sp_insertAWSConfig (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         var params = [
@@ -46,33 +73,28 @@ module.exports=function(){
           data.region
         ];
 
-         try{
+        try{
+            //insert query with sql, parameters and return results or error through callback function
+            const result=await mydb.insertSPPromise(sql, params);
+            if(result != null){
+                //if this is the first time the region has been added we can add the Cloudwatch events
+                var params={
+                    ParentAWSAccountId: awsAccountId
+                }
+                const cfnResult=await cfn.create("cloudwatch", CW_EVENTS_TEMPLATE, params, false, true, false);
+                //createStack(label, templateName, parameters=null, wait=false, url=false, notify=true)
+                if(cfnResult){
+                    
+                }
+                return result;
+                
+            }
+        }catch(e){
+            throw e;
+        }
 
-             //insert query with sql, parameters and retrun results or error through callback function
-             mydb.insertSP(
-                 sql, params,
-                 function(err, result){
-                     if (err) throw err;
-
-                     console.log(result);
-
-                     if(result != null){
-                        cb(null, { id : result });
-                     }
-                 }
-             );
-
-
-         }
-         catch(e){
-             console.log(e);
-             cb({error: "Error adding new aws config"}, null);
-         }
-         finally{
-
-         }
       },
-
+      
       /**
       * @author: Sarah Ruane
       * @description: Remove aws config from a users profile
