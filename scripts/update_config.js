@@ -9,7 +9,7 @@
  * - value: which new value to enter
  * 
  */
-const DEBUG_TIMEOUT=10000;
+const DEBUG_TIMEOUT=10;
 const dest='./app/config/config.json'
 
 var file=require("../app/drivers/file");
