@@ -1,8 +1,4 @@
-if (typeof Promise === 'undefined') {
-    var async = require('asyncawait/async');
-    var await = require('asyncawait/await');
-    var Promise = require('bluebird');
-} 
+
 var  AWSEC2= require('aws-sdk');
 
 //jmes path query expressions

@@ -1,8 +1,4 @@
-if (typeof Promise === 'undefined') {
-  var async = require('asyncawait/async');
-  var await = require('asyncawait/await');
-  var Promise = require('bluebird');
-} 
+
 var userCloudConfigController = require("../../app/controllers/UserCloudConfigController.js");
 var pricingController=require("../../app/controllers/PricingController");
 var auth = require("../../app/utils/auth.js");

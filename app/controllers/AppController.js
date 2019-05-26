@@ -1,8 +1,4 @@
-if (typeof Promise === 'undefined') {
-    var async = require('asyncawait/async');
-    var await = require('asyncawait/await');
-    var Promise = require('bluebird');
-} 
+
 var config, key, metaS3, defaultS3s, resource;
 var schemas = require("../../app/models/");
 var appData = require("../../app/drivers/dynamo.js");

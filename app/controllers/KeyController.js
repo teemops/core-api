@@ -1,8 +1,4 @@
-if (typeof Promise === 'undefined') {
-    var async = require('asyncawait/async');
-    var await = require('asyncawait/await');
-    var Promise = require('bluebird');
-} 
+
 const ERROR_CODE_NOKEYPAIR='InvalidKeyPair.NotFound';
 const KEY_S3_PATH="customer/keys/";
 var ec2=require("../../app/drivers/ec2");

@@ -1,8 +1,4 @@
-if (typeof Promise === 'undefined') {
-    var async = require('asyncawait/async');
-    var await = require('asyncawait/await');
-    var Promise = require('bluebird');
-} 
+
 var config, cfn, sts, s3;
 var cfnDriver=require("../../app/drivers/cfn");
 var stsDriver=require("../../app/drivers/sts");

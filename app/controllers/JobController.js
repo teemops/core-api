@@ -1,8 +1,4 @@
-if (typeof Promise === 'undefined') {
-    var async = require('asyncawait/async');
-    var await = require('asyncawait/await');
-    var Promise = require('bluebird');
-} 
+
 var config, cfn, sts, s3;
 const DEFAULT_CONFIG_PATH='app/config/config.json';
 const CFN_APP_LABEL='app-';

@@ -4,11 +4,7 @@ var config = require('config-json');
 // if (typeof Promise === 'undefined') {
 //     AWS.config.setPromisesDependency(require('bluebird'));
 // } 
-if (typeof Promise === 'undefined') {
-    var async = require('asyncawait/async');
-    var await = require('asyncawait/await');
-    var Promise = require('bluebird');
-} 
+
 config.load('./app/config/config.json');
 const DEFAULT_SQS_VIS_TIMEOUT=30;
 const DEFAULT_SQS_WAIT_TIMEOUT=20;

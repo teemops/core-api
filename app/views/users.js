@@ -2,15 +2,9 @@ var userController = require("../../app/controllers/UserController.js");
 var express = require('express');
 var bodyParser = require('body-parser');
 var auth = require("../../app/utils/auth.js");
-if (typeof Promise === 'undefined') {
-    var async = require('asyncawait/async');
-    var await = require('asyncawait/await');
-    var Promise = require('bluebird');
-} 
-var fs = Promise.promisifyAll(require('fs')); // adds Async() versions that return promises
+
 var router = express.Router();
 var myUser=userController();
-var config;
 
 //Body Parser required to use json and other body data sent in request
 //router.use(bodyParser.urlencoded({ extended: false }));

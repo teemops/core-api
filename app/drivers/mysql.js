@@ -1,8 +1,4 @@
-if (typeof Promise === 'undefined') {
-    var async = require('asyncawait/async');
-    var await = require('asyncawait/await');
-    var Promise = require('bluebird');
-} 
+
 var mysql    = require('mysql');
 var config = require('config-json');
 config.load('./app/config/database.json');

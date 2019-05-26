@@ -1,8 +1,4 @@
-if (typeof Promise === 'undefined') {
-    var async = require('asyncawait/async');
-    var await = require('asyncawait/await');
-    var Promise = require('bluebird');
-} 
+
 var config, cfn, jobsQName, jobsQRegion, awsAccountId;
 const KEYSTORE_TEMPLATE='s3.keyStore';
 const SNS_TEMPLATE='sns.topic';

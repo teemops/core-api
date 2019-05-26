@@ -7,11 +7,7 @@
  * -SNS triggers SQS
  * -This service picks up SQS item
  */
-if (typeof Promise === 'undefined') {
-    var async = require('asyncawait/async');
-    var await = require('asyncawait/await');
-    var Promise = require('bluebird');
-} 
+
 //how long between checking SQS??
 const WAIT_TIME = 500;
 const NOTIFICATION_TYPES = {

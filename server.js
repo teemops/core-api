@@ -3,12 +3,7 @@
 
 // BASE SETUP
 // =============================================================================
-if (typeof Promise === 'undefined') {
-  console.log("Using promises library");
-  var async = require('asyncawait/async');
-  var await = require('asyncawait/await');
-  var Promise = require('bluebird');
-} 
+
 
 // call the packages we need
 var express    = require('express');        // call express

@@ -1,8 +1,4 @@
-if (typeof Promise === 'undefined') {
-    var async = require('asyncawait/async');
-    var await = require('asyncawait/await');
-    var Promise = require('bluebird');
-}
+
 var AWS    = require('aws-sdk'); 
 var config,defaultKeyName,kms;
 

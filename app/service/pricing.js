@@ -1,8 +1,4 @@
-if (typeof Promise === 'undefined') {
-    var async = require('asyncawait/async');
-    var await = require('asyncawait/await');
-    var Promise = require('bluebird');
-} 
+
 const PRODUCTS_FILTER='PriceList[].{vcpu: product.attributes.vcpu,Memory:product.attributes.memory, SW: product.attributes.preInstalledSw, location: product.attributes.location, instanceType: product.attributes.instanceType, term: terms, sku: product.sku, os:product.attributes.operatingSystem, meta:product}';
 var jmespath=require('jmespath');
 var resourceController=require("../controllers/ResourceController");

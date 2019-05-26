@@ -14,11 +14,6 @@
  */
 const DEBUG_TIMEOUT=0;
 
-if (typeof Promise === 'undefined') {
-    var async = require('asyncawait/async');
-    var await = require('asyncawait/await');
-    var Promise = require('bluebird');
-} 
 
 var file=require("../app/drivers/file");
 if (process.argv.length<3){

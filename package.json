@@ -9,14 +9,12 @@
     "tsc": "tsc"
   },
   "dependencies": {
-    "asyncawait": "",
     "aws-sdk": "^2.387.0",
     "body-parser": "^1.18.3",
     "config-json": "^1.0.0",
     "emailjs": "",
     "express": ">=4.5.0",
     "express-validator": "^5.3.0",
-    "fibers": "~4.0.1",
     "jmespath": "^0.15.0",
     "jsonwebtoken": "^5.7.0",
     "lodash": ">=4.17.5",

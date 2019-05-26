@@ -3,11 +3,7 @@
  * Manages Application Environments adding, deleting, updating and querying status
  *
  */
-if (typeof Promise === 'undefined') {
-    var async = require('asyncawait/async');
-    var await = require('asyncawait/await');
-    var Promise = require('bluebird');
-} 
+
 var config = require('config-json');
 config.load('./app/config/config.json');
 var appControlller = require("../../app/controllers/AppController.js");
