@@ -16,6 +16,7 @@
     "emailjs": "",
     "express": ">=4.5.0",
     "express-validator": "^5.3.0",
+    "fibers": "~4.0.1",
     "jmespath": "^0.15.0",
     "jsonwebtoken": "^5.7.0",
     "lodash": ">=4.17.5",
