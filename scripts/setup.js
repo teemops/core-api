@@ -23,8 +23,6 @@ const fields=[
     }
 ];
 
-
-
 var file=require("../app/drivers/file");
 if (process.argv.length<3){
     console.log("Arguments need to be supplied as follows");
