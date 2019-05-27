@@ -1,4 +1,5 @@
-https://travis-ci.org/teemops/core-api.svg?branch=master
+![Teem Ops CI Build Status](https://travis-ci.org/teemops/core-api.svg?branch=master)
+
 # Teemops Core API #
 Simplified AWS Operations
 
