@@ -1,3 +1,4 @@
+https://travis-ci.org/teemops/core-api.svg?branch=master
 # Teemops Core API #
 Simplified AWS Operations
 
