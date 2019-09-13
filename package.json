@@ -5,6 +5,8 @@
     "start-dev": "MODE=dev node server.js",
     "start-test": "MODE=test node server.js",
     "start-prod": "source app/config/prod.env; node server.js",
+    "status-dev": "MODE=dev node app/service/status.js",
+    "pricing-dev": "MODE=dev node app/service/pricing.js",
     "build-images": "MODE=dev node app/service/buildimages.js",
     "tsc": "tsc"
   },
