@@ -1,5 +1,5 @@
 version: 0.2
-
+#help found at https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html
 # env:
 #   variables:
 #     JAVA_HOME: "/usr/lib/jvm/java-8-openjdk-amd64"
@@ -33,19 +33,9 @@ phases:
     commands:
       - echo Entered the post_build phase...
       - echo Build completed on `date`
-# artifacts:
-#   files:
-#     - target/messageUtil-1.0.jar
-#   discard-paths: yes
-#   secondary-artifacts:
-#     artifact1:
-#       files:
-#         - target/messageUtil-1.0.jar
-#       discard-paths: yes
-#     artifact2:
-#       files:
-#         - target/messageUtil-1.0.jar
-#       discard-paths: yes
+artifacts:
+  files: 
+    - '**/*'
 # cache:
 #   paths:
 #     - '/root/.m2/**/*'
