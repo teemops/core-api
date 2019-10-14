@@ -7,13 +7,15 @@ version: 0.2
 #     LOGIN_PASSWORD: /CodeBuild/dockerLoginPassword
 
 phases:
-  # install:
-  #   commands:
-  #     - echo Entered the install phase...
-  #     - apt-get update -y
-  #     - apt-get install -y maven
-  #   finally:
-  #     - echo This always runs even if the update or install command fails 
+  install:
+    runtime-versions:
+      nodejs: 10
+    # commands:
+    #   - echo Entered the install phase...
+    #   - apt-get update -y
+    #   - apt-get install -y maven
+    # finally:
+    #   - echo This always runs even if the update or install command fails 
   # pre_build:
   #   commands:
   #     - echo Entered the pre_build phase...
