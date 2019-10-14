@@ -171,6 +171,9 @@ module.exports=function(){
                     }
                 }else{
                     console.log('Error while performing Query.');
+                    /**
+                     * Tackle all cases related to bad input data
+                     */
                     return callback(err, null);
                 }
             });

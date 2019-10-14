@@ -17,6 +17,7 @@ var Token = require('./app/views/token.js');
 var UserCloudProviders = require('./app/views/usercloudproviders.js');
 var UserCloudConfigs = require('./app/views/usercloudconfigs.js');
 var Pricing= require('./app/views/pricing.js');
+var Data= require('./app/views/data.js');
 
 var config = require('config-json');
 var sse = require('./app/drivers/sse.js');
@@ -84,6 +85,7 @@ startSetup().then(function(){
   app.use('/api/usercloudproviders', UserCloudProviders);
   app.use('/api/usercloudconfigs', UserCloudConfigs);
   app.use('/api/pricing', Pricing);
+  app.use('/api/data', Data);
 
   // more routes for our API will happen here
 
