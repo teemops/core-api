@@ -1,7 +1,26 @@
 
 var config, cfn, sts, s3;
 const DEFAULT_CONFIG_PATH='app/config/config.json';
-const CFN_APP_LABEL='app-';
+const CFN_APP_LABEL='app-'; //DONT CHANGE EVER
+const CFN_TASKS={
+    EC2:{
+        template: 'ec2',
+        output: 'InstanceId'
+    },
+    ASG: {
+        template: 'asg',
+        output: 'ASGGroupName'
+    },
+    ASG_ALB: {
+        template: 'asg.alb',
+        output: 'ASGGroupName'
+    },
+    CODE: {
+        template: 'code.build',
+        output: 'TopsCodeDeployName'
+    }
+};
+
 var resourceController = require("../controllers/ResourceController.js"); 
 var cfnDriver=require("../../app/drivers/cfn");
 var stsDriver=require("../../app/drivers/sts");
@@ -37,8 +56,10 @@ module.exports=function(){
         launchApp: async function launchApp(authUserid, data){
             var sql="CALL sp_getAppByUserID(?,?)";
             var params = [authUserid,data.appid];
-            const KEYSTORE_TEMPLATE=data.task;
+            var TEMPLATE_TO_USE;
             var cfnLaunch=cfn;
+            var outputKey='InstanceId';
+            var cfnParams;
             try{
                 const sqldata=await mydb.getRow(sql, params);
                 
@@ -50,11 +71,34 @@ module.exports=function(){
                 cfnLaunch.creds(sqldata.region, creds);
                 var outputResults=await cfnLaunch.getOutputs(CFN_APP_LABEL+data.appid);
                 var result;
-                if(outputResults!=null && outputResults[0].OutputKey=='InstanceId'){
+                
+                //check for if hasALB or hasASG
+                //OPTION 1: HAS ALB and HASASG
+                if(sqldata.hasALB && sqldata.hasASG){
+                    TEMPLATE_TO_USE=CFN_TASKS.ASG_ALB.template;
+                    outputKey=CFN_TASKS.ASG_ALB.output;
+                    cfnParams=this.asgALBParams(sqldata);
+                }else if(sqldata.hasASG){
+                    //OPTION 2: Has ASG Only
+                    TEMPLATE_TO_USE=CFN_TASKS.ASG.template;
+                    outputKey=CFN_TASKS.ASG.output;
+                    cfnParams=this.asgParams(sqldata);
+                }else{
+                    //OPTION X: Has EC2 Only
+                    TEMPLATE_TO_USE=CFN_TASKS.EC2.template;
+                    outputKey=CFN_TASKS.EC2.output;
+                    cfnParams=this.ec2Params(sqldata);
+                }
+
+                if(outputResults!=null && outputResults[0].OutputKey==outputKey){
                     result=outputResults[0].OutputValue;
                 }else{
-                    var cfnParams=this.ec2Params(sqldata);
-                    result=await cfnLaunch.create(CFN_APP_LABEL+data.appid, KEYSTORE_TEMPLATE, cfnParams, false, true);
+                    result=await cfnLaunch.create(CFN_APP_LABEL+data.appid, TEMPLATE_TO_USE, cfnParams, false, true);
+                }
+                //code deploy
+                if(sqldata.codeSource!=undefined){
+                    //do some code deployment config stuff TBD
+                    
                 }
                 return result;
             }catch(e){
@@ -125,6 +169,66 @@ module.exports=function(){
                 KeyPair: data.keyPair,
                 Subnet: data.appSubnet,
                 SecurityGroup: data.appSecurityGroup
+            }
+        },
+        /**
+         * Parameters for the CloudFormation launch of an ASG
+         * 
+         * @param {*} data 
+         */
+        asgParams:function asgParams(data){
+            data.configData=JSON.parse(data.configData);
+            if(data.keyPair==undefined){
+                data.keyPair='teemops-'+data.userID;
+            }
+            if(data.appEnvironment==undefined){
+                data.appEnvironment='';
+            }
+            return {
+                AMI: data.aimageid,
+                InstanceType: data.appInstanceType,
+                RootVolumeSize: data.configData.cloud.diskSize,
+                AppId: data.appId,
+                AppName: data.name,
+                CustomerId: data.userID,
+                KeyPair: data.keyPair,
+                Subnet: data.appSubnet,
+                SecurityGroup: data.appSecurityGroup,
+                AppEnvironment: data.appEnvironment,
+                Min: data.asgMin,
+                Max: data.asgMax,
+                HasPublicIp: 'true'
+            }
+        },
+        /**
+         * Parameters for the CloudFormation launch of an ASG with ALB
+         * 
+         * @param {*} data 
+         */
+        asgALBParams:function asgALBParams(data){
+            data.configData=JSON.parse(data.configData);
+            if(data.keyPair==undefined){
+                data.keyPair='teemops-'+data.userID;
+            }
+            if(data.appEnvironment==undefined){
+                data.appEnvironment='';
+            }
+            return {
+                AMI: data.aimageid,
+                InstanceType: data.appInstanceType,
+                RootVolumeSize: data.configData.cloud.diskSize,
+                AppId: data.appId,
+                AppName: data.name,
+                CustomerId: data.userID,
+                KeyPair: data.keyPair,
+                VPC: data.vpc,
+                Subnet: data.appSubnet,
+                SecurityGroup: data.appSecurityGroup,
+                AppEnvironment: data.appEnvironment,
+                Min: data.asgMin,
+                Max: data.asgMax,
+                ALBSubnets: data.albSubnets,
+                HasPublicIp: 'false'
             }
         }
     }

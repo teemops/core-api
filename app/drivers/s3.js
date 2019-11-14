@@ -16,7 +16,8 @@ module.exports=function(appConfig){
         getBuckets:  getBuckets,
         readitem: readitem,
         save: saveItem,
-        task: s3Task
+        task: s3Task,
+        read: readItemAsync
     }
 }
 
@@ -79,6 +80,23 @@ async function saveItem(oName, bucketName, body){
             return true;
         }else{
             return false;
+        }
+    }catch(e){
+        throw e;
+    }
+}
+
+async function readItemAsync(oName, bucketName){
+    try{
+        var params = {
+            Bucket: bucketName,
+            Key: oName
+        };
+        const result=await s3Task('getObject', params);
+        if(result!=null){
+            return result.Body;
+        }else{
+            return null;
         }
     }catch(e){
         throw e;

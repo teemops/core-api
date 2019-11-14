@@ -10,9 +10,9 @@ hooks:
 #  BeforeInstall:
 #    - location: Scripts/UnzipResourceBundle.sh
 #    - location: Scripts/UnzipDataBundle.sh
-  AfterInstall:
-    - location: scripts/restart.sh
-      timeout: 180
+  # AfterInstall:
+  #   - location: /srv/apps/api/scripts/restart.sh
+  #     timeout: 180
 #  ApplicationStart:
 #    - location: Scripts/RunFunctionalTests.sh
 #      timeout: 3600

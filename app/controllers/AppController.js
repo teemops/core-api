@@ -23,6 +23,9 @@ module.exports=function(){
             metaS3=appS3(appConfig);
             defaultS3s=metaS3.getBuckets();
         },
+        getKey: async function getKey(userId, region, awsAccountId){
+            const result=await key.get(userId, region, awsAccountId);
+        },
         getAppByIDAuth: function getAppByIDAuth(authUserid, appID, cb){
             var sql="CALL sp_getAppByUserID(?,?)";
             var params = [authUserid,appID];
@@ -72,9 +75,11 @@ module.exports=function(){
          * @usage: request data needs to match schema
          * Lot's TODO
          */
-         addApp: function addApp(authUserid, data, cb){
-            function additem(){
+         addApp: async function addApp(authUserid, data){
 
+            return addItem(data);
+            async function addItem(data){
+                var newAppID;
                 var sql = "CALL sp_insertApp (?, ?, ?, ?, ?, ?, ?, ?)";
 
                 var params = [
@@ -87,47 +92,66 @@ module.exports=function(){
                     data.appProviderId,
                     data.userCloudProviderId
                 ];
-
-                //insert query with sql, parameters and retrun results or error through callback function
-                mydb.insertSP(
-                    sql, params,
-                    function(err, results){
-                        if (err) throw err;
-
-                        if(results!=null){
-                            console.log(results);
-                            var callBackResult={appid:results};
-                            cb(callBackResult);
-                        }
-                    }
-                );
-            }
-
-            var sql="select count(*) as count from app where userid=? and (name=? or appurl=?)";
-            var params = [
-                authUserid,
-                data.name,
-                data.appurl
-            ];
-
-            //query database with sql statement and retrun results or error through callback function
-            mydb.query(
-                sql, params,
-                function(err, results){
-                    if (err) throw err;
-                    console.log("adding app: is existing already results? "+JSON.stringify(results));
+                try{
+                    const results=await mydb.insertSPPromise(sql, params);
                     if(results!=null){
-                        if(results[0].count>0){
-                            var callBackResult={error:"duplicate"};
-                            cb(callBackResult);
-                        }else{
-                            additem();
-                        }
+                        newAppID=results;
+                        
                     }else{
-                        additem();
+                        throw "Internal database error."
+                    }
+                }catch(e){
+                    throw e;
+                }
+                //adds Autoscaling group and optional Application Load Balancer
+                if(data.asg!=undefined){
+                    if(data.asg.enabled){
+                        var sql = "CALL sp_addASG(?,?,?,?,?)";
+
+                        var params = [
+                            newAppID,
+                            authUserid,
+                            data.asg.loadbalancer,
+                            data.asg.groupsize,
+                            data.asg.groupmax
+                        ];
+                        try{
+                            const results=await mydb.updatePromise(sql, params);
+                            if(results!=null){
+                                console.log(results);
+                            }else{
+                                throw "Internal database error."
+                            }
+                        }catch(e){
+                            throw e;
+                        }
                     }
                 }
-            );
+                //adds code deployment
+                if(data.sourceCode!=undefined){
+                    if(data.sourceCode.source!=null){
+                        var sql = "CALL sp_addSourceCode(?,?,?,?,?)";
+
+                        var params = [
+                            newAppID,
+                            data.sourceCode.source,
+                            data.sourceCode.path
+                        ];
+                        try{
+                            const results=await mydb.updatePromise(sql, params);
+                            if(results!=null){
+                                console.log(results);
+                            }else{
+                                throw "Internal database error."
+                            }
+                        }catch(e){
+                            throw e;
+                        }
+                    }
+                }
+                return newAppID;
+            }
+        
         },
         /**
          * @author: Ben Fellows <ben@teemops.com>
@@ -430,7 +454,7 @@ module.exports=function(){
                     const roleArn=JSON.parse(data.auth_data).arn;
                     const doesKeyPairExist=await key.check(userId, data.region, roleArn);
                     if(!doesKeyPairExist){
-                        const createResult=await key.create(userId, data.region, roleArn);
+                        const createResult=await key.create(userId, data.region, roleArn, data.awsAccountId);
                     }
                 }
                 

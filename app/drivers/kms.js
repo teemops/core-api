@@ -90,7 +90,7 @@ async function encrypt(key=defaultKeyName, text){
  */
 async function decrypt(text){
     var params={
-        CiphertextBlob: new Buffer(text)
+        CiphertextBlob: Buffer.from(text)
     }
     try{
         const decryptedResult=await kmsTask('decrypt', params);

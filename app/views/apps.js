@@ -134,22 +134,15 @@ router.get('/:id?', function(req, res) {
  * appurl: <app_url>
  * }
  */
-router.put('/', function(req, res) {
+router.put('/', async function(req, res) {
     try{
-        myApps.addApp(
-            req.auth_userid,
-            req.body,
-            function (outputMessage){
-                console.log("ID Added for new app: "+outputMessage);
-                res.json(outputMessage);
-            }
-        );
+        const result=await myApps.addApp(req.auth_userid, req.body);
+        res.json({appid: result});
     }catch(e){
         res.json({error:e});
     }finally {
         console.log("Processing completed for adding app.");
     }
-
 });
 
 /**
@@ -442,6 +435,32 @@ router.post('/pricing', async function(req, res){
         res.json({error:"Processing error"});
         console.log(e);
     }
+    
+});
+
+/**
+ * request example:
+ * {
+ *      "awsAccountId":"1234556",
+ *      "region": "us-west-2"
+ * }
+ */
+router.post('/key', async function(req, res){
+
+    try{
+        var result=await myApps.getKey(req.auth_userid, req.body.region, req.body.awsAccountId)
+        if(result!=null){
+            res.json({data: result});
+        }else{
+            res.json({error: 'Key returned no results'})
+        }
+
+    }catch(e){
+        res.json({error:"Couldn't get key"});
+        console.log(e);
+    }
+
+    
     
 });
 
