@@ -117,42 +117,36 @@ router.get('/', function(req, res) {
  * @author: Ben Fellows
  * @description: Get Specific Cloud Provider Accounts for this specific user
  * @usage: pass user_cloud_provider_id as param. user id also required for authorisation
- * DELETE /<api_base>/usercloudproviders
+ * POST /<api_base>/usercloudproviders/search
  */
-router.post('/search',
-  function(req, res) {
-    console.log("Search is going on!");
-    if(req.auth_userid == req.body.userId) {
-      var accountId=userCloudProvider.getAccountIdFromArn(req.body.arn);
-      console.log("AccountID: "+accountId)
+router.post('/search', function(req, res) {
+    // if(req.auth_userid == req.body.userId) {
+    //   var accountId=userCloudProvider.getAccountIdFromArn(req.body.arn);
+    //   userCloudProvider.getByAccountId(
+    //     req.body.userId,
+    //     accountId,
+    //     function (providers){
+    //         if(providers){
+    //           var providerParams={
+    //             userId: req.body.userId,
+    //             cloudProviderId: DEFAULT_CLOUD_PROVIDER,
+    //             awsAccountId: accountId,
+    //             name:'default-'+accountId,
+    //             isDefault:1
+    //           }
+    //           userCloudProvider.addCloudProviderAccount(
 
-      userCloudProvider.getByAccountId(
-        req.body.userId,
-        accountId,
-        function (providers){
-            console.log("All supported cloud providers: "+providers);
-            if(length(providers)){
-              var providerParams={
-                userId: req.body.userId,
-                cloudProviderId: DEFAULT_CLOUD_PROVIDER,
-                awsAccountId: accountId,
-                
-              }
-              userCloudProvider.addCloudProviderAccount(
-
-              )
-            }else{
-              res.json(providers);
-            }
+    //           )
+    //         }else{
+    //           res.json(providers);
+    //         }
               
-        }
-      );
+    //     }
+    //   );
 
-    }else{
-      console.log("Userid "+ req.auth_userid)
-      console.log(JSON.stringify(auth));
-      return res.status(403).json({ errors: "Access denied for user" }); 
-    }
+    // }else{
+    //   return res.status(403).json({ errors: "Access denied for user" }); 
+    // }
 
 });
 

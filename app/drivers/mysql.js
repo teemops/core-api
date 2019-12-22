@@ -70,7 +70,7 @@ module.exports=function(){
        getRow: async function getRow(sqlstring, params){
         try{
             const result=await this.queryPromise(sqlstring, params);
-            if(result!=null){
+            if(result[0].length>0){
                 return result[0][0];
             }else{
                 return null;

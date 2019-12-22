@@ -118,7 +118,7 @@ module.exports=function(){
                         try{
                             const results=await mydb.updatePromise(sql, params);
                             if(results!=null){
-                                console.log(results);
+                                console.log("ASG added");
                             }else{
                                 throw "Internal database error."
                             }

@@ -299,7 +299,7 @@ router.post('/launch', async function(req, res) {
                 throw "Unkown error in updateAppStatus";
             }
         }catch(e){
-            res.json({status: "Error adding a job."});
+            res.json({status: "Error adding a job.", details: e});
         }
     }
 });
@@ -348,7 +348,6 @@ router.post('/task/:task?', async function(req, res){
  * GET /<api_base>/apps/infra/<appid>
  */
 router.get('/infra/:id?', async function(req, res) {
-    console.log(req.params.id);
     try{
         var result=await myApps.getAppInfra(req.auth_userid, req.params.id);
         if(result!=null){
@@ -358,10 +357,8 @@ router.get('/infra/:id?', async function(req, res) {
         }
 
     }catch(e){
-        res.json({error:"Processing error"});
-        console.log(e);
+        res.json({error:e});
     }
-    
 
 });
 

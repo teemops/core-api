@@ -1,5 +1,6 @@
 
 var config, cfn, sts, s3;
+var log = require('../drivers/log.js');
 var cfnDriver=require("../../app/drivers/cfn");
 var stsDriver=require("../../app/drivers/sts");
 var ec2=require("../../app/drivers/ec2");
@@ -10,7 +11,6 @@ var jmespath = require('jmespath');
 var mydb= mysql();
 var jobQ=appQ();
 var defaultQs=jobQ.getQs();
-console.log(defaultQs.jobsq + "default jobsq");
 
 /**
  * @author: Ben Fellows <ben@teemops.com>
@@ -82,14 +82,31 @@ module.exports=function(){
             var params=[appId];
             try{
                 const sqldata=await mydb.getRow(sql, params);
-                if(sqldata.metaData!=undefined){
-                    return sqldata.metaData;
+                if(sqldata!=null){
+                    if(sqldata.metaData!=undefined){
+                        return sqldata.metaData;
+                    }else{
+                        throw {
+                            code: 'NotFound'
+                        };
+                    }
                 }else{
-                    return null;
+                    throw {
+                        code: 'NotFound'
+                    };
                 }
-                
             }catch(e){
-                throw e;
+                if (e.code != null) {
+                    switch (e.code) {
+                        case 'NotFound':
+                            throw log.EXCEPTIONS.NOT_FOUND;
+                            break;
+                        default:
+                            throw e;
+                    }
+                } else {
+                    throw e;
+                }
             }
         },
         stopApp: async function stopApp(authUserid, appId){

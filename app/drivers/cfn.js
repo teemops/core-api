@@ -87,6 +87,7 @@ async function waitFor(waitCommand, params){
  * @param {*} parameters 
  * @param {*} wait 
  * @param {*} url Is the template a URL or local file?
+ * @param {*} notify Whether or not to send an SNS notification back once CFN CREATE is done
  */
 async function createStack(label, templateName, parameters=null, wait=false, url=false, notify=true){
     try{
@@ -399,10 +400,23 @@ function getParams(params){
         return cfnParamsArray;
     }
     Object.keys(params).forEach(function(value, index, array){
-        cfnParamsArray.push({
-            ParameterKey: value,
-            ParameterValue: params[value].toString()
-        });
+        try{
+            if(params[value]!=null){
+                cfnParamsArray.push({
+                    ParameterKey: value,
+                    ParameterValue: params[value].toString()
+                });
+            }else{
+                const error={
+                    code: "NullParameter",
+                    message: "Parameter "+ value + " does not exist."
+                }
+                throw error;
+            }
+            
+        }catch(e){
+            throw e;
+        }
     });
     return cfnParamsArray;
 }
