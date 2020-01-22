@@ -3,12 +3,13 @@
 
 // BASE SETUP
 // =============================================================================
-
+const PUBLIC_ROUTES=['/api/users'];
 
 // call the packages we need
 var express    = require('express');        // call express
 var app        = express();                 // define our app using express
 var bodyParser = require('body-parser');
+var auth = require("./app/utils/auth.js");
 var Users = require('./app/views/users.js');
 var Apps = require('./app/views/apps.js');
 var AppStatus = require('./app/views/appstatus.js');
@@ -22,8 +23,9 @@ var Data= require('./app/views/data.js');
 var config = require('config-json');
 var sse = require('./app/drivers/sse.js');
 var clientList = require('./app/models/clientList.js');
-
 var setup = require("./app/controllers/SetupController.js");
+var security=require('./app/security/index');
+
 config.load('./app/config/config.json');
 // Start function
 const startSetup = async function() {
@@ -43,7 +45,7 @@ startSetup().then(function(){
 
   //var jwtauth = require('./controllers/AuthController.js');
 
-  app.all('/*', function(req, res, next) {
+  app.all('/*', async function(req, res, next) {
     // CORS headers
     res.header("Access-Control-Allow-Origin", "*"); // restrict it to the required domain
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
@@ -53,10 +55,29 @@ startSetup().then(function(){
     if (req.method == 'OPTIONS') {
       res.status(200).end();
     } else {
-      next();
+      const path=req.path;
+      console.log("Path: "+path);
+      if(path.indexOf(PUBLIC_ROUTES)>=0){
+        next();
+      }else{
+        try{
+          const allowed=await security(req, path);
+          if(allowed){
+            next();
+          }else{
+            throw {
+              code: 400,
+              message: 'Bad request - not allowed'
+            }
+          }
+        }catch(e){
+          res.json({error:e});
+          res.status(e.code).end();
+        } 
+      }
+      
     }
   });
-
 
   // configure app to use bodyParser()
   // this will let us get the data from a POST

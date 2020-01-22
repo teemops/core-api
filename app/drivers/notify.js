@@ -29,12 +29,10 @@ function dynamoMessage(event, callback) {
     dynamoClient [task] function is a generic Dynamo task handler
     */
     dynamoClient[event.task](params, function(err, data) {
-        console.log("Starting callback of dynamoClient task "+event.task);
+        
         if (err) {
-            console.log("Inside dynamoClient Error"+JSON.stringify(err));
           callback(err, null);
         }else{
-            console.log("Data from dynamoClient"+ event.task+" "+JSON.stringify(data));
           if (data.length!==0) {
             //var output=jms.search(data, "Vpcs[].{ID: VpcId, IPRange: CidrBlock, Tags: Tags[*]}");
             callback(null, data);

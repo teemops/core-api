@@ -1,0 +1,72 @@
+---
+
+#Set of resources, with roles that inherit previous roles
+# e.g. view role has role user, admin role inherits all roles
+resources:
+  - my.account
+  - org.account
+  - org.users
+  - my.apps
+  - org.apps
+  - my.configs
+  - org.configs
+  - my.credentials
+  - org.credentials
+roles:
+  user:
+    permissions:
+      view:
+        - account
+        - my.apps
+        - my.configs
+        - my.credentials
+      add:
+        - account
+        - my.apps
+        - my.configs
+        - my.credentials
+      edit:
+        - account
+        - my.apps
+        - my.configs
+        - my.credentials
+      delete:
+        - my.apps
+        - my.configs
+        - my.credentials
+  view:
+    permissions:
+      view:
+        - org.apps
+        - org.configs
+        - org.credentials
+  ops:
+    permissions:
+      add:
+        - org.apps
+        - org.configs
+      edit:
+        - org.apps
+        - org.configs
+      delete:
+        - org.apps
+        - org.configs
+  security:
+    permissions:
+      add:
+        - org.credentials
+      edit:
+        - org.credentials
+      delete:
+        - org.credentials
+  admin:
+    permissions:
+      add:
+        - org.account
+        - org.users
+      edit:
+        - org.account
+        - org.users
+      delete:
+        - org.account
+        - org.users

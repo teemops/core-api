@@ -11,7 +11,6 @@ var config = require('config-json');
 config.load('./app/config/config.json');
 
 async function pricingRunTask(event, credentials=null) {
-    console.log("Credentials in EC2 lib: "+credentials);
     if(credentials!=null){
         AWSPrice.config.update({
         accessKeyId:credentials.accessKeyId,

@@ -11,7 +11,6 @@ var config = require('config-json');
 config.load('./app/config/config.json');
 
 async function ec2RunTask(event, credentials=null) {
-    console.log("Credentials in EC2 lib: "+credentials);
     if(credentials!=null){
       AWSEC2.config.update({
         accessKeyId:credentials.accessKeyId,
@@ -26,15 +25,13 @@ async function ec2RunTask(event, credentials=null) {
     }
     var ec2Client=new AWSEC2.EC2();
     var params=event.params;
-    console.log("EC2 Task Parameters: "+ JSON.stringify(params));
+
     return new Promise(function(resolve, reject){
         ec2Client[event.task](params, function(err, data) {
-            console.log("Starting callback of ec2Client task"+event.task);
+            
             if (err) {
-                console.log("Inside Error"+JSON.stringify(err));
               reject(err);
             }else{
-                console.log("Data from EC2Client"+ event.task+" "+data);
               if (data.length!==0) {
                 //var output=jms.search(data, "Vpcs[].{ID: VpcId, IPRange: CidrBlock, Tags: Tags[*]}");
                 resolve(data);

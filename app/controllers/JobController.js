@@ -177,12 +177,10 @@ module.exports=function(){
          * @param {*} data 
          */
         asgParams:function asgParams(data){
+            var appEnvironment=(data.appEnvironment==undefined ? null : appEnvironment=data.appEnvironment);
             data.configData=JSON.parse(data.configData);
             if(data.keyPair==undefined){
                 data.keyPair='teemops-'+data.userID;
-            }
-            if(data.appEnvironment==undefined){
-                data.appEnvironment='';
             }
             return {
                 AMI: data.aimageid,
@@ -194,7 +192,7 @@ module.exports=function(){
                 KeyPair: data.keyPair,
                 Subnet: data.appSubnet,
                 SecurityGroup: data.appSecurityGroup,
-                AppEnvironment: data.appEnvironment,
+                AppEnvironment: appEnvironment,
                 Min: data.asgMin,
                 Max: data.asgMax,
                 HasPublicIp: 'true'
@@ -203,17 +201,19 @@ module.exports=function(){
         /**
          * Parameters for the CloudFormation launch of an ASG with ALB
          * 
-         * @param {*} data 
+         * @param {*} data
          */
         asgALBParams:function asgALBParams(data){
+            //params that can be null
+            var appEnvironment=(data.appEnvironment==undefined ? null : appEnvironment=data.appEnvironment);
+            var sslArn=(data.sslArn==undefined ? null : sslArn=data.sslArn);
+
             data.configData=JSON.parse(data.configData);
             if(data.keyPair==undefined){
                 data.keyPair='teemops-'+data.userID;
             }
-            if(data.appEnvironment==undefined){
-                data.appEnvironment='';
-            }
-            return {
+
+            var params={
                 AMI: data.aimageid,
                 InstanceType: data.appInstanceType,
                 RootVolumeSize: data.configData.cloud.diskSize,
@@ -224,12 +224,15 @@ module.exports=function(){
                 VPC: data.vpc,
                 Subnet: data.appSubnet,
                 SecurityGroup: data.appSecurityGroup,
-                AppEnvironment: data.appEnvironment,
+                AppEnvironment: appEnvironment,
                 Min: data.asgMin,
                 Max: data.asgMax,
                 ALBSubnets: data.albSubnets,
-                HasPublicIp: 'false'
-            }
+                HasPublicIp: 'false',
+                SSLArn: sslArn
+            };
+
+            return params;
         }
     }
 };

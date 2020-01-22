@@ -4,6 +4,7 @@ var log = require('../drivers/log.js');
 var cfnDriver=require("../../app/drivers/cfn");
 var stsDriver=require("../../app/drivers/sts");
 var ec2=require("../../app/drivers/ec2");
+var at=require("../../app/drivers/awsTask");
 var price=require("../../app/drivers/pricing");
 var appQ = require("../../app/drivers/sqs.js");
 var mysql = require("../../app/drivers/mysql.js");
@@ -305,6 +306,26 @@ module.exports=function(){
                 cfn.useSTSCredentials(region,creds);
                 var result=await cfn.task(task, params);
                 return result;
+            }catch(e){
+                throw e;
+            }
+
+        },
+        genericTask: async function(authUserid, AWSAccountId, className, task, params, region){
+            var sql='CALL sp_getSTSCredsUserAccount(?, ?)';
+            var sqlParams=[authUserid, AWSAccountId];
+            try{
+                const sqldata=await mydb.getRow(sql, sqlParams);
+                
+                var stsParams={
+                    RoleArn: JSON.parse(sqldata.authData).arn
+                }
+                var creds=await sts.assume(stsParams);
+                //set client
+                var client=at.client(region, creds, className);
+
+                var task=await at(client, 'listCertificates', params);
+                return task;
             }catch(e){
                 throw e;
             }

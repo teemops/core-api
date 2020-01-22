@@ -89,8 +89,10 @@ module.exports = function () {
                                 var jwtPayload = {
                                     userid: results[0].userid,
                                     username: results[0].username,
-                                    email: data.email
+                                    email: data.email,
+                                    role: 'user'
                                 };
+                                //TODO: Update this function to handle different roles, by now default role is user role.
                                 var jwtToken = myJWT.createJWT(jwtPayload);
 
                                 cb(null, { token: jwtToken, status: true });

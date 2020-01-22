@@ -26,8 +26,6 @@ console.log("SSE Events started");
       }
 
     };
-    console.log("Return something");
-    
 
     return {
 

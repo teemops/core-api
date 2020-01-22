@@ -13,7 +13,7 @@ var jmespath = require('jmespath');
 
 var messageQ=appQ();
 var defaultQs=messageQ.getQs();
-console.log(defaultQs.jobsq + "default jobsq");
+console.log("Default SQS MQ name: "+defaultQs.jobsq);
 
 /**
  * This is run on startup of app to ensure settings such 
@@ -26,15 +26,14 @@ async function init(appConfig){
     jobsQRegion=config.get("sqs", "region");
     awsAccountId=config.get("AWSAccountId");
 
-    console.log("appConfig: "+JSON.stringify(appConfig));
     //check Message Queues are setup
     var startQ= await createJobQ();
     if(startQ){
-        console.log("New Teemops Main Q Created");
+        console.log("New Teemops Main SQS Created");
     }
     var createKey=await createKMSKey();
     if(createKey){
-        console.log("Teemops Key was created or already present");
+        console.log("Teemops KMS init");
     }
     
     var keyStore=await createKeyStore();

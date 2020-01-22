@@ -13,10 +13,9 @@ var myUser=userController();
 const DEFAULT_CLOUD_PROVIDER=1; //AWS
 
 // Authentication middleware
-router.use(auth);
+// router.use(auth);
 
 router.put('/', function(req, res) {
-
     /**
      * Check whether or not the usercloudprovider's account is added yet
      * if accountid does not exist then add

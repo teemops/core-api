@@ -406,6 +406,39 @@ router.post('/ec2', async function(req, res){
 });
 
 /**
+ * AWS Task 'at'
+ * This runs a generic AWS Task
+ * 
+ * Expected Input
+{
+    "awsAccountId": 123,
+    "className": "ACM",
+    "task": "listCertificates",
+    "params": {},
+    "region": "ap-southeast-2"
+}
+ */
+router.post('/general', async function(req, res){
+    
+    try{
+        var result=await resource.genericTask(req.auth_userid, req.body.awsAccountId, req.body.className, req.body.task, req.body.params,req.body.region);
+        if(result!=null){
+            if(req.body.filter!=undefined){
+                result=jmespath.search(result, req.body.filter);
+            }
+            res.json({data: result});
+        }else{
+            res.json({error: 'Generic Task returned no results'})
+        }
+
+    }catch(e){
+        res.json({error:"Processing error"});
+        console.log(e);
+    }
+    
+});
+
+/**
  * request example:
  * {
  *      "awsAccountId":"1234556",
@@ -459,6 +492,15 @@ router.post('/key', async function(req, res){
 
     
     
+});
+
+router.post('/alb', async function(req, res){
+
+    try{
+
+    }catch(e){
+        
+    }
 });
 
 module.exports = router;

@@ -16,11 +16,6 @@ router.get('/', function(req, res) {
   res.send('Users API Documentation');
 });
 
-// define the list page route
-router.get('/list', function(req, res) {
-  res.json({ userid: '1', name: 'ben', email: 'sdsdds@sdjnsjkdn.com' }); 
-});
-
 /**
  * @author: Ben Fellows <ben@teemops.com>
  * @description: add a user
@@ -93,6 +88,8 @@ router.get('/:id?', auth, function(req, res) {
 /**
  * @author: Ben Fellows <ben@teemops.com>
  * @description: search and filter for users
+ * Only used for checking if a requested username exists.
+ * 
  * @usage: request header needs to include
  * POST /<api_base>/users/search/<query>
  * 
@@ -120,8 +117,5 @@ router.post('/login', function(req, res) {
     }
   );
 });
-
-
-
 
 module.exports = router;

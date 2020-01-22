@@ -392,6 +392,9 @@ async function checkStackStatus(stackName){
 /**
  * Converts an object to an Array of CloudFormation compatible
  * ParameterKey/ParameterValue pairs.
+ * 
+ * If a parameter is null it won't be added to the Parameters list
+ * 
  * @param {*} params just an object
  */
 function getParams(params){
@@ -406,13 +409,14 @@ function getParams(params){
                     ParameterKey: value,
                     ParameterValue: params[value].toString()
                 });
-            }else{
-                const error={
-                    code: "NullParameter",
-                    message: "Parameter "+ value + " does not exist."
-                }
-                throw error;
             }
+            // else{
+            //     const error={
+            //         code: "NullParameter",
+            //         message: "Parameter "+ value + " does not exist."
+            //     }
+            //     throw error;
+            // }
             
         }catch(e){
             throw e;
