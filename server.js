@@ -3,13 +3,12 @@
 
 // BASE SETUP
 // =============================================================================
-const PUBLIC_ROUTES=['/api/users'];
+const PUBLIC_ROUTES=['/api/users', '/api/pricing', '/api/data', '/subscribe'];
 
 // call the packages we need
 var express    = require('express');        // call express
 var app        = express();                 // define our app using express
 var bodyParser = require('body-parser');
-var auth = require("./app/utils/auth.js");
 var Users = require('./app/views/users.js');
 var Apps = require('./app/views/apps.js');
 var AppStatus = require('./app/views/appstatus.js');
@@ -42,9 +41,17 @@ const startSetup = async function() {
 // Call start
 startSetup().then(function(){
   config.load('./app/config/config.json');
+   // configure app to use bodyParser()
+  // this will let us get the data from a POST
+  app.use(bodyParser.urlencoded({ extended: true }));
+  app.use(bodyParser.json());
 
   //var jwtauth = require('./controllers/AuthController.js');
 
+  app.param('userid', function (req, res, next, id) {
+    console.log('CALLED ONLY ONCE'+id);
+    next()
+  });
   app.all('/*', async function(req, res, next) {
     // CORS headers
     res.header("Access-Control-Allow-Origin", "*"); // restrict it to the required domain
@@ -55,9 +62,15 @@ startSetup().then(function(){
     if (req.method == 'OPTIONS') {
       res.status(200).end();
     } else {
+
       const path=req.path;
       console.log("Path: "+path);
-      if(path.indexOf(PUBLIC_ROUTES)>=0){
+      
+      const match = PUBLIC_ROUTES.find(
+        route=>(path.indexOf(route)==0)
+      );
+      
+      if(match!==undefined){
         next();
       }else{
         try{
@@ -71,18 +84,20 @@ startSetup().then(function(){
             }
           }
         }catch(e){
+          if(e.code==undefined){
+            e.code=500;
+          }else{
+            res.status(e.code);
+          }
           res.json({error:e});
-          res.status(e.code).end();
+          res.end();
         } 
       }
       
     }
   });
 
-  // configure app to use bodyParser()
-  // this will let us get the data from a POST
-  app.use(bodyParser.urlencoded({ extended: true }));
-  app.use(bodyParser.json());
+ 
 
   var port = process.env.PORT || 8080;        // set our port
 

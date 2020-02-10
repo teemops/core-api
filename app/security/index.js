@@ -7,8 +7,12 @@ var settings;
 //These are the default resources all roles have access to
 const routes={
     '/apps': ['my.apps'],
+    '/appstatus': ['my.apps'],
     '/credentials': ['my.credentials'],
-    '/usercloudconfigs': ['my.configs']
+    '/token': ['my.credentials'],
+    '/usercloudproviders': ['my.credentials'],
+    '/usercloudconfigs': ['my.configs'],
+    '/subscribe': ['my.apps']
 };
 const actions={
     GET: 'view',
@@ -29,9 +33,12 @@ module.exports = async function(req, resource){
         settings = yaml.safeLoad(await file.read('./app/config/security.yaml'));
     }
     var action=getActionFromMethod(req.method);
+    const requestedUserId=getRequestedUserId(req);
     const user=getJWTValues(req);
-    if(await roleHasAccess(user, resource, action) && 
-        await userHasAccess(user, req.params, action)){
+    if(requestedUserId && await roleHasAccess(user, resource, action) && 
+        await userHasAccess(user, requestedUserId, action)){
+        return true;
+    }else if(await roleHasAccess(user, resource, action)){
         return true;
     }else{
         throw {
@@ -40,6 +47,55 @@ module.exports = async function(req, resource){
         };
     }
 }
+
+/**
+ * Security middleware
+ * Checks access for a given userid to the specific resource with
+ * Auth details
+ * 
+ * @param req Original request object
+ */
+module.exports.middleware = function(req, res, next){
+    var authUserId=getJWTValues(req).userid;
+    
+    if(authUserId){
+        req.auth_userid=authUserId;
+        next();
+    }else{
+        res.status(401);
+        res.json({err: "Access Denied"});
+    }
+    
+}
+
+module.exports.has=function(req){
+    var requestedUserId=getRequestedUserId(req);
+    var authUserId=getJWTValues(req).userid;
+    if(requestedUserId!=null){
+        if(requestedUserId==authUserId){
+            return true;
+        }else{
+            return false;
+        }
+    }else{
+        return false;
+    }
+}
+
+
+/**
+ * Checks either params or request body
+ */
+function getRequestedUserId(req){
+    if(req.params.userId){
+        return req.params.userId;
+    }else if(req.body.userId){
+        return req.body.userId;
+    }else{
+        return null;
+    }
+}
+
 
 function getActionFromMethod(method){
     if(actions[method]!=undefined){
@@ -85,10 +141,10 @@ async function roleHasAccess(user, resource, action) {
     }
 };
 
-async function userHasAccess(user, params, action){
+async function userHasAccess(user, requestedUserId, action){
     if(user){
         //always return true if users userid =requested userid
-        if(user.userid==params.userId){
+        if(user.userid==requestedUserId){
             return true;
         }else{
             /**

@@ -14,8 +14,7 @@ var resourceController=require("../controllers/ResourceController");
 var express = require('express');
 var bodyParser = require('body-parser');
 var jmespath=require('jmespath');
-var auth = require("../../app/utils/auth.js");
-
+var security = require('../../app/security/index');
 var router = express.Router();
 var myApps=appControlller();
 var myJobs=jobController();
@@ -25,7 +24,8 @@ var resource=resourceController();
 //Body Parser required to use json and other body data sent in request
 //router.use(bodyParser.urlencoded({ extended: false }));
 router.use(bodyParser.json());
-router.use(auth);
+// Authentication middleware
+router.use(security.middleware);
 
 //Auth middleware for all routes in this view
 myApps.init(config);
@@ -495,11 +495,11 @@ router.post('/key', async function(req, res){
 });
 
 router.post('/alb', async function(req, res){
-
     try{
-
+        const result=await myApps.updateAlb(req.body);
+        res.json({result: result});
     }catch(e){
-        
+        res.json({error:e});
     }
 });
 

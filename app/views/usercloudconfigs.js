@@ -1,15 +1,14 @@
 
 var userCloudConfigController = require("../../app/controllers/UserCloudConfigController.js");
 var pricingController = require("../../app/controllers/PricingController");
-var auth = require("../../app/utils/auth.js");
+var security = require('../../app/security/index');
 var bodyParser = require('body-parser');
 var express = require('express');
-
 var router = express.Router();
 var userCloudConfig = userCloudConfigController();
 var pricing = pricingController();
 router.use(bodyParser.json());
-router.use(auth);
+router.use(security.middleware);
 
 /**
  * @author: Sarah Ruane
@@ -18,7 +17,7 @@ router.use(auth);
  * GET /<api_base>/usercloudconfigs
  */
 router.get('/listByUserId/:userId?', function (req, res) {
-  if (req.auth_userid == req.params.userId) {
+  if (security.has(req)) {
     userCloudConfig.getAWSConfigsByUserId(req.params.userId,
       function (err, result) {
 
@@ -29,7 +28,8 @@ router.get('/listByUserId/:userId?', function (req, res) {
         }
       });
   }else{
-    res.json({error:"access denied"});
+    res.status(401);
+    res.json({error:"Access denied"});
   }
 
 });
@@ -41,7 +41,7 @@ router.get('/listByUserId/:userId?', function (req, res) {
  * PUT /<api_base>/usercloudconfigs
  */
 router.put('/', async function (req, res) {
-  if (req.auth_userid == req.body.userId) {
+  if (security.has(req)) {
     try {
       var result = await userCloudConfig.addAWSConfig(req.body);
       res.json({ id: result });
@@ -49,7 +49,8 @@ router.put('/', async function (req, res) {
       res.json({ error: e });
     }
   }else{
-    res.json({error:"access denied"});
+    res.status(401);
+    res.json({error:"Access denied"});
   }
   
 });
@@ -66,7 +67,7 @@ router.delete('/:params', function (req, res) {
 
   //This check is to ensure that logged in users can only update their own user details
   //This will likely change in the future if a partner user needs to access details of their clients
-  if (req.auth_userid == params.userId) {
+  if (security.has(req)) {
 
     userCloudConfig.deleteAWSConfig({ userId: params.userId, id: params.id },
       function (err, result) {
@@ -86,7 +87,8 @@ router.delete('/:params', function (req, res) {
   }
   else {
     console.log("User authenticated (id: " + req.auth_userid + "), but not authorised to update details for user id: " + params.userId);
-    res.json({ error: "Not authorised" });
+    res.status(401);
+    res.json({error:"Access denied"});
   }
 });
 
@@ -109,7 +111,7 @@ router.post('/', function (req, res) {
 
   //This check is to ensure that logged in users can only update their own user details
   //This will likely change in the future if a partner user needs to access details of their clients
-  if (req.auth_userid == req.body.userId) {
+  if (security.has(req)) {
 
     userCloudConfig.updateAWSConfig(req.body,
       function (err, result) {
@@ -125,7 +127,8 @@ router.post('/', function (req, res) {
   }
   else {
     console.log("User authenticated (id: " + req.auth_userid + "), but not authorised to update details for user id: " + req.body.userId);
-    res.json({ error: "Not authorised" });
+    res.status(401);
+    res.json({error:"Access denied"});
   }
 });
 

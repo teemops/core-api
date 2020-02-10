@@ -1,5 +1,5 @@
 var userCloudProviderController = require("../../app/controllers/UserCloudProviderController.js");
-var auth = require("../../app/utils/auth.js");
+var security = require('../../app/security/index');
 var express = require('express');
 var bodyParser = require('body-parser');
 var router = express.Router();
@@ -8,9 +8,9 @@ const DEFAULT_CLOUD_PROVIDER=1  //AWS
 
 //Validation TODO
 //const { check, validationResult } = require('express-validator/check');
-
+router.use(bodyParser.json());
 //Auth middleware for all routes in this view
-router.use(auth);
+router.use(security.middleware);
 
 /**
  * @author: Sarah Ruane

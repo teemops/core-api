@@ -463,5 +463,24 @@ module.exports=function(){
             }
             
         },
+        updateAlb: async function updateAlb(data){
+            var sql='CALL sp_updateALB(?, ?, ?, ?)';
+            var params=[
+                data.appId,
+                data.albSubnets,
+                data.albListeners,
+                data.albSSLArn
+            ];
+            try{
+                const result=await mydb.insertSPPromise(sql, params);
+                if(result){
+                    return true;
+                }else{
+                    return false;
+                }
+            }catch(e){
+                throw e;
+            }
+        }
     }
 };
