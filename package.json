@@ -24,7 +24,7 @@
     "jmespath": "^0.15.0",
     "js-yaml": "^3.13.1",
     "jsonwebtoken": "^5.7.0",
-    "lodash": "^4.17.15",
+    "lodash": ">=4.17.15",
     "mime": ">=1.4.1",
     "mysql": "^2.16.0",
     "nodemailer": "",
@@ -32,6 +32,7 @@
   },
   "devDependencies": {
     "eslint": "^5.12.0",
+    "eslint-utils": "2.0.0",
     "jasmine": "^2.99.0",
     "mocha": "^5.2.0",
     "nodemon": "^1.18.9"
