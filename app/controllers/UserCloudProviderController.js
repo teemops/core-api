@@ -9,24 +9,27 @@ module.exports = function () {
     * @description: Add a new cloud provider account to a users profile
     * @usage: request data should include userid, cloudproviderId, awsAccountId, name, isDefault flag
     */
-    addCloudProviderAccount: async function (data, cb) {
+    addCloudProviderAccount: async function (data) {
+      const existingId = await getExistingAWSAccountId(data.userId, data.awsAccountId);
+      if (existingId > 0) {
+        throw ({ error: 'Account ID Already Exists for this User' });
+      } else {
+        var sql = "CALL sp_insertUserCloudProvider (?, ?, ?, ?, ?)";
+        var params = [
+          data.userId,
+          data.cloudProviderId,
+          data.awsAccountId,
+          data.name,
+          data.isDefault ? 1 : 0
+        ];
 
-      var sql = "CALL sp_insertUserCloudProvider (?, ?, ?, ?, ?)";
-      var params = [
-        data.userId,
-        data.cloudProviderId,
-        data.awsAccountId,
-        data.name,
-        data.isDefault ? 1 : 0
-      ];
-
-      try {
-        const result = await mydb.insertSPPromise(sql, params);
-        return ({ id: result });
-      } catch (e) {
-        throw ({ error: 'Error Adding Cloud Provider' });
+        try {
+          const result = await mydb.insertSPPromise(sql, params);
+          return ({ id: result });
+        } catch (e) {
+          throw ({ error: 'Error Adding Cloud Provider' });
+        }
       }
-
     },
 
     /**
@@ -62,7 +65,7 @@ module.exports = function () {
      * @param {*} userId
      * @param {*} cb 
      */
-    getByAccountId: async function (userId, accountId, cb) {
+    getByAccountId: async function (userId, accountId) {
 
       var sql = "SELECT * FROM user_cloud_provider WHERE (userid=? AND aws_account_id=?)";
       var params = [userId, accountId];
@@ -85,7 +88,7 @@ module.exports = function () {
     * @description: Remove cloud provider account from a users profile
     * @usage: request data should user_cloud_provider_id and userid
     */
-    deleteCloudProviderAccount: async function (data, cb) {
+    deleteCloudProviderAccount: async function (data) {
 
       var sql = "CALL sp_deleteUserCloudProvider(?,?)";
       var params = [data.userCloudProviderId, data.userId];
@@ -96,7 +99,7 @@ module.exports = function () {
           return (results);
         }
       } catch (e) {
-        throw({ error: "Error removing cloud provider account" }, null);
+        throw ({ error: "Error removing cloud provider account" }, null);
       }
 
     },
@@ -106,7 +109,7 @@ module.exports = function () {
     * @description: update cloud provider account for a user
     * @usage: request data should provide user_cloud_provider_id and userid
     */
-    updateCloudProviderAccount: async function (data, cb) {
+    updateCloudProviderAccount: async function (data) {
 
       var sql = "CALL sp_updateUserCloudProvider (?, ?, ?, ?, ?)";
       var params = [data.id, data.userId, data.awsAccountId, data.name, data.isDefault];
@@ -117,9 +120,28 @@ module.exports = function () {
           return (results);
         }
       } catch (e) {
-        throw({ error: "Error updating cloud provider account" }, null);
+        throw ({ error: "Error updating cloud provider account" }, null);
       }
 
     }
   };
+}
+
+async function getExistingAWSAccountId(userId, awsAccountId) {
+  var sql = "CALL sp_checkAWSAccount(?, ?)";
+  var params = [
+    userId,
+    awsAccountId
+  ];
+
+  try {
+    const result = await mydb.getRow(sql, params);
+    if (result) {
+      return result.id;
+    } else {
+      return 0;
+    }
+  } catch (e) {
+    throw ({ error: 'Error Getting Existing AWS Account Id' });
+  }
 }

@@ -237,6 +237,7 @@ async function updateStatus(Message){
     }
 }
 
+
 /**
  * Remove SQS Message by given ID
  * @param {*} MessageId 

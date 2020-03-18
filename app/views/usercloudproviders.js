@@ -18,21 +18,16 @@ router.use(security.middleware);
  * @usage: userid, cloudproviderId, awsAccountId, isDefault flag
  * PUT /<api_base>/usercloudproviders
  */
-router.put('/', function(req, res) {
+router.put('/', async function(req, res) {
 
-    userCloudProvider.addCloudProviderAccount(req.body,
-      function (err, result){
-
-        console.log(result);
-        
-        if(err) {
-          res.json(err);
-        }
-        else {
-
-          res.json(result);
-        }
-      });
+  try{
+    const providerParams=req.body;
+    const account = await userCloudProvider.addCloudProviderAccount(providerParams);
+    res.json(account);
+  }catch (e) {
+    res.json({ e });
+  }
+  
 });
 
 

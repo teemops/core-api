@@ -111,16 +111,14 @@ router.get('/list', function(req, res) {
  * @usage: request header needs to include
  * GET /<api_base>/apps/<appid>
  */
-router.get('/:id?', function(req, res) {
+router.get('/:id?', async function(req, res) {
     console.log(req.params.id);
-    myApps.getAppByIDAuth(
-        req.auth_userid,
-        req.params.id,
-        function (outputList){
-            console.log("App Data for appID: "+outputList);
-            res.json(outputList);
-        }
-    );
+    try{
+        const app=await myApps.getAppByIDAuth(req.auth_userid, req.params.id);
+        res.json(app);
+    } catch(e){
+        res.json({error:e});
+    }
 
 });
 
@@ -280,17 +278,61 @@ router.put('/job', async function(req, res) {
 router.post('/launch', async function(req, res) {
     //console.log("PUT app/job function Req.body.appid"+req.body.appid);
 
-    var adddata={userid: req.auth_userid, appid: req.body.appid, action: req.body.action, task: req.body.task};
+    var addData={userid: req.auth_userid, appid: req.body.appid, action: req.body.action, task: req.body.task};
 
     if(req.auth_userid!=req.body.userid){
         console.log("User "+req.auth_userid+" is not authorised to launch apps for "+req.body.userid);
         res.json({status: "authorisation error"});
     }else{
         try{
-            const jobData=await myJobs.launchApp(req.auth_userid,adddata);
+            var jobData;
+            if(addData.action=='update'){
+                jobData=await myJobs.launchApp(req.auth_userid,addData, true);
+            }else{
+                jobData=await myJobs.launchApp(req.auth_userid,addData);
+            }
+            
             console.log("Queue data: "+jobData);
-            const response=await myApps.updateAppStatus(req.auth_userid, req.body.appid, adddata.action);
+            const response=await myApps.updateAppStatus(req.auth_userid, req.body.appid, addData.action);
         
+            if(response && !response.error){
+                console.log("Status "+ response);
+                //myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
+                res.json({status: response});
+            }else{
+                throw "Unkown error in updateAppStatus";
+            }
+        }catch(e){
+            res.json({status: "Error adding a job.", details: e});
+        }
+    }
+});
+
+
+/**
+ * @author: Ben Fellows <ben@teemops.com>
+ * @description: Deploys Code to App
+ * @usage: request data needs to include
+ * {
+ * userid: <user_id>,
+ * action: <action>, e.g. start, stop, remove
+ * appid: <app_id>
+ * }
+ */
+router.post('/deploy', async function(req, res) {
+    //console.log("PUT app/job function Req.body.appid"+req.body.appid);
+
+    var addData={userid: req.auth_userid, appid: req.body.appid, action: req.body.action, task: req.body.task};
+
+    if(req.auth_userid!=req.body.userid){
+        console.log("User "+req.auth_userid+" is not authorised to deploy code for "+req.body.userid);
+        res.json({status: "authorisation error"});
+    }else{
+        try{
+            var jobData = await myJobs.deployCode(req.auth_userid,addData);
+            
+            console.log("Queue data: "+jobData);
+ 
             if(response && !response.error){
                 console.log("Status "+ response);
                 //myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
