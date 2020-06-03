@@ -1,5 +1,6 @@
 var mysql = require("../../app/drivers/mysql.js");
 var mydb = mysql();
+var log = require('../../app/drivers/log.js');
 const DEFAULT_CLOUD_PROVIDER = 1; //AWS
 
 module.exports = function () {
@@ -10,9 +11,9 @@ module.exports = function () {
     * @usage: request data should include userid, cloudproviderId, awsAccountId, name, isDefault flag
     */
     addCloudProviderAccount: async function (data) {
-      const existingId = await getExistingAWSAccountId(data.userId, data.awsAccountId);
+      const existingId = await getExistingAWSAccountId(data.userId, data.awsAccountId, data.name);
       if (existingId > 0) {
-        throw ({ error: 'Account ID Already Exists for this User' });
+        log.error(log.EXCEPTIONS.duplicate, 'Acccount ID and Account Alias must be unique.');
       } else {
         var sql = "CALL sp_insertUserCloudProvider (?, ?, ?, ?, ?)";
         var params = [
@@ -27,7 +28,7 @@ module.exports = function () {
           const result = await mydb.insertSPPromise(sql, params);
           return ({ id: result });
         } catch (e) {
-          throw ({ error: 'Error Adding Cloud Provider' });
+          log.error(log.EXCEPTIONS.generic, e);
         }
       }
     },
@@ -127,11 +128,12 @@ module.exports = function () {
   };
 }
 
-async function getExistingAWSAccountId(userId, awsAccountId) {
-  var sql = "CALL sp_checkAWSAccount(?, ?)";
+async function getExistingAWSAccountId(userId, awsAccountId, accountAlias) {
+  var sql = "CALL sp_checkAWSAccount(?, ?, ?)";
   var params = [
     userId,
-    awsAccountId
+    awsAccountId,
+    accountAlias
   ];
 
   try {

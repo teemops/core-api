@@ -39,10 +39,13 @@ module.exports = function () {
                     }
 
                     if (results != null) {
-                        cb({ result: results[0] });
-                    }
-                    else {
-                        cb({ error: "No rows" });
+                        cb({
+                            result: results[0]
+                        });
+                    } else {
+                        cb({
+                            error: "No rows"
+                        });
                     }
                 });
         },
@@ -95,18 +98,23 @@ module.exports = function () {
                                 //TODO: Update this function to handle different roles, by now default role is user role.
                                 var jwtToken = myJWT.createJWT(jwtPayload);
 
-                                cb(null, { token: jwtToken, status: true });
-                            }
-                            else {
+                                cb(null, {
+                                    token: jwtToken,
+                                    status: true
+                                });
+                            } else {
                                 cb("unverified", false);
                             }
-                        }
-                        else {
-                            cb(null, { status: false });
+                        } else {
+                            cb(null, {
+                                status: false
+                            });
                         }
 
                     } else {
-                        cb(null, { status: false });
+                        cb(null, {
+                            status: false
+                        });
                     }
                 }
             );
@@ -119,7 +127,7 @@ module.exports = function () {
          */
         addUser: async function addUser(data) {
 
-            var defaultStatus = 0;	   //disabled by default
+            var defaultStatus = 0; //disabled by default
             var timeNow = Date.now();
             var confirmCode = this.createConfirmCode(data.username + data.email + timeNow);
             var sql = "INSERT INTO user(email, username, password, status, timestamp, confirmcode, first, last)";
@@ -159,7 +167,7 @@ module.exports = function () {
 
             function sendConfirmEmail(results) {
                 var subject = "Please confirm your Teem Ops Registration";
-                var message = "<p>Confirmation Link: " + cfg.item("ui_site", "base_url").base_url + "/#/public/confirm/" + confirmCode + "</p>";
+                var message = "<p>Confirmation Link: " + cfg.item("ui_site", "base_url").base_url + "/public/confirm/" + confirmCode + "</p>";
 
                 myEmail.sendEmail(
                     data.email, subject, message,
@@ -181,7 +189,7 @@ module.exports = function () {
                 authUserid
             ];
 
-            //insert query with sql, parameters and retrun results or error through callback function
+            //insert query with sql, parameters and return results or error through callback function
             mydb.update(
                 sql, params,
                 function (err, results) {
@@ -189,9 +197,13 @@ module.exports = function () {
 
                     if (results != null) {
                         console.log(results);
-                        cb({ result: results });
+                        cb({
+                            result: results
+                        });
                     } else {
-                        cb({ error: "update_error" });
+                        cb({
+                            error: "update_error"
+                        });
                     }
                 }
             );
@@ -211,9 +223,13 @@ module.exports = function () {
 
                     if (results != null) {
                         console.log(results);
-                        cb({ result: results });
+                        cb({
+                            result: results
+                        });
                     } else {
-                        cb({ error: "update_error" });
+                        cb({
+                            error: "update_error"
+                        });
                     }
                 }
             );
@@ -234,9 +250,13 @@ module.exports = function () {
 
                     if (results != null) {
                         console.log(results);
-                        cb({ result: results });
+                        cb({
+                            result: results
+                        });
                     } else {
-                        cb({ error: "update_error" });
+                        cb({
+                            error: "update_error"
+                        });
                     }
                 }
             );
@@ -298,11 +318,11 @@ module.exports = function () {
 
 
         /**
-        * @author: Ben Fellows <ben@teemops.com>
-        * @description: Gets users by searching
-        * @usage: request data should include query
-        * resource to select users based on search query
-        */
+         * @author: Ben Fellows <ben@teemops.com>
+         * @description: Gets users by searching
+         * @usage: request data should include query
+         * resource to select users based on search query
+         */
         searchUsers: function searchUsers(searchQuery, cb) {
             var searchString = mydb.escape('%' + searchQuery + '%');
             var sql = "SELECT * FROM user WHERE username LIKE " + searchString + " OR email LIKE " + searchString + " OR last LIKE " + searchString + " OR first LIKE " + searchString;

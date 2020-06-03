@@ -10,6 +10,7 @@ var resourceController = require("../controllers/ResourceController");
 var util = require('util');
 var _ = require("lodash");
 var mydb = mysql();
+var log = require('../../app/drivers/log.js');
 
 module.exports = function () {
     return {
@@ -313,7 +314,7 @@ module.exports = function () {
                 data.userDataProviderId,
                 data.awsConfigId
             ];
-            //check or create keypair for giving awsconfigid
+            //check or create keypair for the given awsconfigid
             try {
                 await this.addKeyPair(authUserid, data.awsConfigId);
                 const results = await mydb.updatePromise(sql, params);
@@ -340,7 +341,7 @@ module.exports = function () {
                 var sql = "UPDATE app SET status=(select newstatus from job_type where action=?), notify=? where id=? and userid=?";
                 var params = [action, notify, appId, authUserid];
             } else {
-                var sql = "UPDATE app SET status=(select newstatus from job_type where action=?), notify=NULL where id=? and userid=?";
+                var sql = "UPDATE app SET status=(select newstatus from job_type where action=?) where id=? and userid=?";
                 var params = [action, appId, authUserid];
             }
 
@@ -445,10 +446,15 @@ module.exports = function () {
          * displayed in the infrastructure details.
          */
         getAppInfra: async function getAppInfra(authUserid, appId) {
-            var metaData = await resource.getMetaData(appId);
-            var data = JSON.parse(metaData);
-            var instances = data.Instances;
-            return instances[0];
+            try {
+                var metaData = await resource.getMetaData(appId);
+                var data = JSON.parse(metaData);
+                var instances = data.Instances;
+                return instances[0];
+            } catch (e) {
+                throw log.error(log.EXCEPTIONS.generic, e);
+            }
+
         },
         /**
          * Adds key pair fo given user id and aws config

@@ -10,11 +10,12 @@ var appControlller = require("../../app/controllers/AppController.js");
 var jobController = require("../../app/controllers/JobController.js");
 var eventController = require("../../app/controllers/EventController.js");
 var resourceController=require("../controllers/ResourceController");
-
+var log=require('../../app/drivers/log.js');
 var express = require('express');
 var bodyParser = require('body-parser');
 var jmespath=require('jmespath');
 var security = require('../../app/security/index');
+var log=require('../../app/drivers/log.js');
 var router = express.Router();
 var myApps=appControlller();
 var myJobs=jobController();
@@ -281,8 +282,7 @@ router.post('/launch', async function(req, res) {
     var addData={userid: req.auth_userid, appid: req.body.appid, action: req.body.action, task: req.body.task};
 
     if(req.auth_userid!=req.body.userid){
-        console.log("User "+req.auth_userid+" is not authorised to launch apps for "+req.body.userid);
-        res.json({status: "authorisation error"});
+        res.json(log.error(log.EXCEPTIONS.forbidden, "User is not authorised to launch"));
     }else{
         try{
             var jobData;
@@ -303,7 +303,7 @@ router.post('/launch', async function(req, res) {
                 throw "Unkown error in updateAppStatus";
             }
         }catch(e){
-            res.json({status: "Error adding a job.", details: e});
+            res.json(e);
         }
     }
 });
@@ -325,8 +325,7 @@ router.post('/deploy', async function(req, res) {
     var addData={userid: req.auth_userid, appid: req.body.appid, action: req.body.action, task: req.body.task};
 
     if(req.auth_userid!=req.body.userid){
-        console.log("User "+req.auth_userid+" is not authorised to deploy code for "+req.body.userid);
-        res.json({status: "authorisation error"});
+        res.json(log.error(log.EXCEPTIONS.forbidden, "User is not authorised to deploy"));
     }else{
         try{
             var jobData = await myJobs.deployCode(req.auth_userid,addData);
@@ -377,8 +376,7 @@ router.post('/task/:task?', async function(req, res){
             }
         );
     }else{
-        console.log("User "+req.auth_userid+" is not authorised to launch apps for "+req.body.userid);
-        res.json({status: "authorisation error"});
+        res.json(log.error(log.EXCEPTIONS.forbidden, "User is not authorised"));
     }
 
 });
@@ -390,17 +388,21 @@ router.post('/task/:task?', async function(req, res){
  * GET /<api_base>/apps/infra/<appid>
  */
 router.get('/infra/:id?', async function(req, res) {
-    try{
-        var result=await myApps.getAppInfra(req.auth_userid, req.params.id);
-        if(result!=null){
-            res.json({result: result});
-        }else{
-            res.json({error: 'No infrastructure for this app yet.'})
+    if(req.auth_userid==req.body.userid){
+        try{
+            var result=await myApps.getAppInfra(req.auth_userid, req.params.id);
+            if(result!=null){
+                res.json({result: result});
+            }else{
+                res.json({error: 'No infrastructure for this app yet.'})
+            }
+        }catch(e){
+            res.json({error:e});
         }
-
-    }catch(e){
-        res.json({error:e});
+    }else{
+        res.json(log.error(log.EXCEPTIONS.forbidden, "User is not authorised"));
     }
+    
 
 });
 
