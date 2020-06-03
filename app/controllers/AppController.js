@@ -336,10 +336,15 @@ module.exports = function () {
          * Refer to mysql table job_type which has a list of valid actions
          * Also refer to app_status table for valid status names
          */
-        updateAppStatus: function updateApp(authUserid, appId, action, notify = null) {
+        updateAppStatus: function updateApp(authUserid, appId, action, notify = null, reset = false) {
             if (notify != null) {
-                var sql = "UPDATE app SET status=(select newstatus from job_type where action=?), notify=? where id=? and userid=?";
-                var params = [action, notify, appId, authUserid];
+                if (reset) {
+                    var sql = "UPDATE app SET status=(select newstatus from job_type where action=?), notify=NULL where id=? and userid=?";
+                    var params = [action, appId, authUserid];
+                } else {
+                    var sql = "UPDATE app SET status=(select newstatus from job_type where action=?), notify=? where id=? and userid=?";
+                    var params = [action, notify, appId, authUserid];
+                }
             } else {
                 var sql = "UPDATE app SET status=(select newstatus from job_type where action=?) where id=? and userid=?";
                 var params = [action, appId, authUserid];
@@ -408,12 +413,12 @@ module.exports = function () {
          * @param {*} appId 
          * @param {*} action 
          */
-        updateStatusFromNotify: async function updateStatusFromNotify(appId, action, reason = null) {
+        updateStatusFromNotify: async function updateStatusFromNotify(appId, action, reason = null, reset = false) {
             try {
                 var statusUpdate;
                 const userId = await this.getUserFromAppId(appId);
                 if (reason != null) {
-                    statusUpdate = await this.updateAppStatus(userId, appId, action, reason);
+                    statusUpdate = await this.updateAppStatus(userId, appId, action, reason, reset);
                 } else {
                     statusUpdate = await this.updateAppStatus(userId, appId, action);
                 }

@@ -144,7 +144,7 @@ async function updateStatus(Message) {
             if (event.ResourceStatus.toString().indexOf('CREATE_COMPLETE') >= 0 && event.ResourceType.toString().indexOf('Stack') >= 0) {
                 console.log("Updating App Status");
                 //update App Status
-                var result = await myApps.updateStatusFromNotify(appId, 'cfn.create');
+                var result = await myApps.updateStatusFromNotify(appId, 'cfn.create', 'completed', true);
                 if (result.error != undefined) {
                     throw result.error;
                 }
