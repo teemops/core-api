@@ -17,8 +17,9 @@
 		"source=${localEnv:HOME}/.aws,target=/root/.aws,type=bind,consistency=cached",
 		"source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,consistency=cached"
 	],
-	"forwardPorts": [8080],
-	"runArgs": ["--net=host"]
+	"forwardPorts": [8080,3306],
+	"runArgs": ["--net=host"],
+	
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// 
