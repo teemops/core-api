@@ -11,7 +11,7 @@ FROM mcr.microsoft.com/vscode/devcontainers/javascript-node:0-12
 #
 # ENV DEBIAN_FRONTEND=noninteractive
 # RUN apt-get update \
-#    && apt-get -y install --no-install-recommends mysql mysql-client \
+#    && apt-get -y install --no-install-recommends mysql-server \
 #    #
 #    # Clean up
 #    && apt-get autoremove -y \

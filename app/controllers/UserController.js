@@ -325,8 +325,8 @@ module.exports = function () {
          */
         searchUsers: function searchUsers(searchQuery, cb) {
             var searchString = mydb.escape('%' + searchQuery + '%');
-            var sql = "SELECT * FROM user WHERE username LIKE " + searchString + " OR email LIKE " + searchString + " OR last LIKE " + searchString + " OR first LIKE " + searchString;
-            var params = [];
+            var sql = "SELECT username FROM user WHERE username LIKE ? OR email LIKE ? OR last LIKE ? OR first LIKE ?";
+            var params = [searchString];
 
             //query database with sql statement and retrun results or error through callback function
             mydb.query(

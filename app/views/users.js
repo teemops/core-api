@@ -118,4 +118,18 @@ router.post('/login', function(req, res) {
   );
 });
 
+router.post('/reset', function(req, res) {
+    myUser.loginUser(req.body,
+    function (err, token){
+        if (err) { 
+            res.json({ err });  
+        }else{
+            res.json( token );
+        }
+
+        
+    }
+  );
+});
+
 module.exports = router;

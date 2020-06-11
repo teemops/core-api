@@ -35,4 +35,4 @@ Desktop.ini
 ######################
 # Custom Teemops and MySQL
 ######################
-/mysql
+/mysql/**
