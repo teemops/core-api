@@ -3,7 +3,7 @@
 
 // BASE SETUP
 // =============================================================================
-
+const PUBLIC_ROUTES=['/api/users', '/api/pricing', '/api/data', '/subscribe'];
 
 // call the packages we need
 var express    = require('express');        // call express
@@ -17,12 +17,14 @@ var Token = require('./app/views/token.js');
 var UserCloudProviders = require('./app/views/usercloudproviders.js');
 var UserCloudConfigs = require('./app/views/usercloudconfigs.js');
 var Pricing= require('./app/views/pricing.js');
+var Data= require('./app/views/data.js');
 
 var config = require('config-json');
 var sse = require('./app/drivers/sse.js');
 var clientList = require('./app/models/clientList.js');
-
 var setup = require("./app/controllers/SetupController.js");
+var security=require('./app/security/index');
+
 config.load('./app/config/config.json');
 // Start function
 const startSetup = async function() {
@@ -39,10 +41,18 @@ const startSetup = async function() {
 // Call start
 startSetup().then(function(){
   config.load('./app/config/config.json');
+   // configure app to use bodyParser()
+  // this will let us get the data from a POST
+  app.use(bodyParser.urlencoded({ extended: true }));
+  app.use(bodyParser.json());
 
   //var jwtauth = require('./controllers/AuthController.js');
 
-  app.all('/*', function(req, res, next) {
+  app.param('userid', function (req, res, next, id) {
+    console.log('CALLED ONLY ONCE'+id);
+    next()
+  });
+  app.all('/*', async function(req, res, next) {
     // CORS headers
     res.header("Access-Control-Allow-Origin", "*"); // restrict it to the required domain
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
@@ -52,15 +62,42 @@ startSetup().then(function(){
     if (req.method == 'OPTIONS') {
       res.status(200).end();
     } else {
-      next();
+
+      const path=req.path;
+      console.log("Path: "+path);
+      
+      const match = PUBLIC_ROUTES.find(
+        route=>(path.indexOf(route)==0)
+      );
+      
+      if(match!==undefined){
+        next();
+      }else{
+        try{
+          const allowed=await security(req, path);
+          if(allowed){
+            next();
+          }else{
+            throw {
+              code: 400,
+              message: 'Bad request - not allowed'
+            }
+          }
+        }catch(e){
+          if(e.code==undefined){
+            e.code=500;
+          }else{
+            res.status(e.code);
+          }
+          res.json({error:e});
+          res.end();
+        } 
+      }
+      
     }
   });
 
-
-  // configure app to use bodyParser()
-  // this will let us get the data from a POST
-  app.use(bodyParser.urlencoded({ extended: true }));
-  app.use(bodyParser.json());
+ 
 
   var port = process.env.PORT || 8080;        // set our port
 
@@ -84,6 +121,7 @@ startSetup().then(function(){
   app.use('/api/usercloudproviders', UserCloudProviders);
   app.use('/api/usercloudconfigs', UserCloudConfigs);
   app.use('/api/pricing', Pricing);
+  app.use('/api/data', Data);
 
   // more routes for our API will happen here
 

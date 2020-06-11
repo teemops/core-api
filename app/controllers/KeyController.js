@@ -18,7 +18,8 @@ function init(appConfig){
 
     return {
         create:createEc2Key,
-        check: checkEc2KeyExists
+        check: checkEc2KeyExists,
+        get: getEc2Key
     }
 }
 
@@ -30,7 +31,7 @@ function init(appConfig){
  * @param {*} region 
  * @param {*} RoleArn 
  */
-async function createEc2Key(userId, region, RoleArn){
+async function createEc2Key(userId, region, RoleArn, awsAccountId){
     var stsParams={
         RoleArn:RoleArn
     }
@@ -49,7 +50,7 @@ async function createEc2Key(userId, region, RoleArn){
         //now get the unencrypted KeyMaterial(PEM key unencrypted)
         if(key!=null){
             const encrypted=await kms.encrypt(defaultKeyName, key.KeyMaterial);
-            var objectPath=KEY_S3_PATH+userId+"/"+region+"/"+keyName+".pem";
+            var objectPath=KEY_S3_PATH+userId+"/"+awsAccountId+"/"+region+"/"+keyName+".pem";
             const savedS3=await s3.save(objectPath, keyBucket, encrypted);
             if(savedS3){
                 return true;
@@ -59,6 +60,30 @@ async function createEc2Key(userId, region, RoleArn){
             }
         }else{
             return null;
+        }
+    }catch(e){
+        throw e;
+    }
+}
+
+/**
+ * Returns unencrypted key
+ * 
+ * @param {*} userId 
+ * @param {*} region 
+ * @param {*} RoleArn 
+ */
+async function getEc2Key(userId, region, awsAccountId){
+    var keyName="teemops-"+userId;
+    var objectPath=KEY_S3_PATH+userId+"/"+awsAccountId+"/"+region+"/"+keyName+".pem";
+    try{
+        const savedS3=await s3.read(objectPath, keyBucket);
+        const decrypted=await kms.decrypt(savedS3.toString());
+        if(decrypted){
+            return decrypted;
+        }else{
+            var error='EC2 Key Pair was not found in S3';
+            throw error;
         }
     }catch(e){
         throw e;

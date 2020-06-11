@@ -1,8 +1,10 @@
 
 var config, cfn, sts, s3;
+var log = require('../drivers/log.js');
 var cfnDriver=require("../../app/drivers/cfn");
 var stsDriver=require("../../app/drivers/sts");
 var ec2=require("../../app/drivers/ec2");
+var at=require("../../app/drivers/awsTask");
 var price=require("../../app/drivers/pricing");
 var appQ = require("../../app/drivers/sqs.js");
 var mysql = require("../../app/drivers/mysql.js");
@@ -10,7 +12,6 @@ var jmespath = require('jmespath');
 var mydb= mysql();
 var jobQ=appQ();
 var defaultQs=jobQ.getQs();
-console.log(defaultQs.jobsq + "default jobsq");
 
 /**
  * @author: Ben Fellows <ben@teemops.com>
@@ -82,14 +83,31 @@ module.exports=function(){
             var params=[appId];
             try{
                 const sqldata=await mydb.getRow(sql, params);
-                if(sqldata.metaData!=undefined){
-                    return sqldata.metaData;
+                if(sqldata!=null){
+                    if(sqldata.metaData!=undefined){
+                        return sqldata.metaData;
+                    }else{
+                        throw {
+                            code: 'NotFound'
+                        };
+                    }
                 }else{
-                    return null;
+                    throw {
+                        code: 'NotFound'
+                    };
                 }
-                
             }catch(e){
-                throw e;
+                if (e.code != null) {
+                    switch (e.code) {
+                        case 'NotFound':
+                            throw log.EXCEPTIONS.NOT_FOUND;
+                            break;
+                        default:
+                            throw e;
+                    }
+                } else {
+                    throw e;
+                }
             }
         },
         stopApp: async function stopApp(authUserid, appId){
@@ -288,6 +306,26 @@ module.exports=function(){
                 cfn.useSTSCredentials(region,creds);
                 var result=await cfn.task(task, params);
                 return result;
+            }catch(e){
+                throw e;
+            }
+
+        },
+        genericTask: async function(authUserid, AWSAccountId, className, task, params, region){
+            var sql='CALL sp_getSTSCredsUserAccount(?, ?)';
+            var sqlParams=[authUserid, AWSAccountId];
+            try{
+                const sqldata=await mydb.getRow(sql, sqlParams);
+                
+                var stsParams={
+                    RoleArn: JSON.parse(sqldata.authData).arn
+                }
+                var creds=await sts.assume(stsParams);
+                //set client
+                var client=at.client(region, creds, className);
+
+                var task=await at(client, 'listCertificates', params);
+                return task;
             }catch(e){
                 throw e;
             }

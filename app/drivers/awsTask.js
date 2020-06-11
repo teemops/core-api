@@ -1,8 +1,29 @@
-var AWS    = require('aws-sdk'); 
-// Check if environment supports native promises
-if (typeof Promise === 'undefined') {
-    AWS.config.setPromisesDependency(require('bluebird'));
+var AWSGen    = require('aws-sdk'); 
+
+/**
+ * Must be a valid AWS SDK class e.g EC2, RDS, ACM, CloudFormation
+ * 
+ * @param {*} libType 
+ * @returns AWS Client Object
+ */
+function client(region, credentials, className){
+    if(credentials!=null){
+        AWSGen.config.update({
+            accessKeyId:credentials.accessKeyId,
+            secretAccessKey:credentials.secretAccessKey,
+            sessionToken:credentials.sessionToken,
+            region:region
+        });
+    }else{
+        AWSGen.config.update({
+            region: region
+        });
+    }
+    
+    var client=new AWSGen[className]();
+    return client;
 }
+
 /**
  * Runs AWS Task as a Promise
  * 
@@ -23,3 +44,4 @@ function Task(awsObject, task, params=null){
 }
 
 module.exports=Task;
+module.exports.client=client;

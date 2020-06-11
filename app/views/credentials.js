@@ -1,132 +1,98 @@
 var credentialController = require("../../app/controllers/CredentialController.js");
-var userCloudProviderController=require("../../app/controllers/UserCloudProviderController");
-var userController = require("../../app/controllers/UserController.js");
+var userCloudProviderController = require("../../app/controllers/UserCloudProviderController");
 var express = require('express');
-var bodyParser = require('body-parser');
-var auth = require("../../app/utils/auth.js");
-
 var router = express.Router();
-var myCredential=credentialController();
-var userCloudProvider=userCloudProviderController();
-var myUser=userController();
+var myCredential = credentialController();
+var userCloudProvider = userCloudProviderController();
+var security = require('../../app/security/index');
 
-const DEFAULT_CLOUD_PROVIDER=1; //AWS
+const DEFAULT_CLOUD_PROVIDER = 1; //AWS
 
 // Authentication middleware
-router.use(auth);
+router.use(security.middleware);
 
-router.put('/', function(req, res) {
+router.put('/', async function (req, res) {
+  /**
+   * Check whether or not the usercloudprovider's account is added yet
+   * if accountid does not exist then add
+   */
+  var authData = JSON.parse(req.body.authData);
+  var accountId = userCloudProvider.getAccountIdFromAuth(req.body.authData);
 
-    /**
-     * Check whether or not the usercloudprovider's account is added yet
-     * if accountid does not exist then add
-     */
-    var authData=JSON.parse(req.body.authData);
-    var accountId=userCloudProvider.getAccountIdFromAuth(req.body.authData);
-    
-    console.log("AccountID: "+accountId);
+  console.log("AccountID: " + accountId);
+  try {
+    const providers = await userCloudProvider.getByAccountId(req.body.userid, accountId);
+    if (providers == undefined) {
 
-    //check if account exists
-    userCloudProvider.getByAccountId(
-      req.body.userId,
-      accountId,
-      function (providers){
-          console.log("All supported cloud providers: "+providers);
+      var providerParams = {
+        userId: req.body.userId,
+        cloudProviderId: DEFAULT_CLOUD_PROVIDER,
+        awsAccountId: accountId,
+        name: authData.name,
+        isDefault: req.body.isDefault
+      };
+      //TODO: create async request
 
-          if(!providers.length){
-            var providerParams={
-              userId: req.body.userId,
-              cloudProviderId: DEFAULT_CLOUD_PROVIDER,
-              awsAccountId: accountId,
-              name: authData.name,
-              isDefault: req.body.isDefault
-            };
-            
-            addUsersCloudAccount(providerParams);
-          }else{
-            addUsersProvider(providers);
-          }    
-      }
-    );
-    
-    /**
-     * Adding users cloud account details such as aws accountid
-     * @param {*} params 
-     */
-    function addUsersCloudAccount(params){
-      userCloudProvider.addCloudProviderAccount(
-        params,
-        function(err, data){
-          if (err) {
-            res.json({ err });
-          }
-          else {
-            addUsersProvider(data);
-          }
-        }
-      );
-    }
-    
-    /**
-     * Adding Users Cloud provider data/details
-     * including auth type and credential information e.g. 
-     * IAM Cross account role name.
-     */
-    function addUsersProvider(userCloudProvider){
-      var params={
-        userCloudProviderId: userCloudProvider.id,
+      const account = await userCloudProvider.addCloudProviderAccount(providerParams);
+      var params = {
+        userCloudProviderId: account.id,
         awsAuthMethod: req.body.awsAuthMethod,
         authData: req.body.authData
       };
 
-      myCredential.addUserDataProvider(params,
-        function (err, result){
-  
-          if (err) {
-            res.json({ err });
-          }
-          else {
-            res.json({ credentialId: result });
-          }
-        }
-      );
-    } 
+      const newId = await myCredential.addUserDataProvider(params);
+      res.json({ credentialId: newId });
+
+    } else {
+      var params = {
+        userCloudProviderId: providers.id,
+        awsAuthMethod: req.body.awsAuthMethod,
+        authData: req.body.authData
+      };
+
+      const newId = await myCredential.addUserDataProvider(params);
+      res.json({ credentialId: newId });
+    }
+  } catch (e) {
+    res.json({ e });
+  }
+
 });
 
-router.post('/', function(req, res) {
+router.post('/', function (req, res) {
 
-    myCredential.updateUserDataProvider(req.body,
-      function (err, result){
+  myCredential.updateUserDataProvider(req.body,
+    function (err, result) {
 
-          if (err) {
-            res.json({ err });
-          }
-          else {
-            res.json({ success: result });
-          }
+      if (err) {
+        res.json({ err });
       }
-    );
-});
-
-router.delete('/:id?', function(req, res) {
-
-    myCredential.deleteUserDataProvider(req.params.id,
-      function (err, result){
-
-        if (err) {
-          res.json({ err });
-        }
-        else {
-          res.json({ success: result });
-        }
+      else {
+        res.json({ success: result });
       }
-    );
+    }
+  );
 });
 
-router.get('/listByUserId/:userid?', function(req, res) {
+router.delete('/:id?', function (req, res) {
 
-    myCredential.getDataProvidersByUserId(req.params.userid,
-      function (err, result){
+  myCredential.deleteUserDataProvider(req.params.id,
+    function (err, result) {
+
+      if (err) {
+        res.json({ err });
+      }
+      else {
+        res.json({ success: result });
+      }
+    }
+  );
+});
+
+router.get('/listByUserId/:userId?', function (req, res) {
+  if (security.has(req)) {
+    myCredential.getDataProvidersByUserId(req.params.userId,
+      function (err, result) {
 
         if (err) {
           res.json({ err });
@@ -136,6 +102,10 @@ router.get('/listByUserId/:userid?', function(req, res) {
         }
       }
     );
+  } else {
+    res.status(401);
+    res.json({error:"Access denied"});
+  }
 });
 
 module.exports = router;

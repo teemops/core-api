@@ -2,10 +2,10 @@ var nodemailer = require('nodemailer');
 
 var config, auth_host, auth_user, auth_pass;
 
-module.exports=function(){
+module.exports = function () {
     return {
-        init:  function init (appConfig) {
-            config=appConfig;
+        init: function init(appConfig) {
+            config = appConfig;
             auth_host = config.get("notifications", "smtp_host");
             auth_user = config.get("notifications", "smtp_user");
             auth_pass = config.get("notifications", "smtp_pass");
@@ -14,10 +14,10 @@ module.exports=function(){
          * @author: Ben Fellows <ben@teemops.com>
          * @description: Send email
          */
-        sendEmail: function sendEmail(to, subject, message, callback){
+        sendEmail: function sendEmail(to, subject, message, callback) {
             // create reusable transporter object using the default SMTP transport 
-            var transporter = nodemailer.createTransport('smtps://'+auth_user+':'+auth_pass+'@'+auth_host);
-            
+            var transporter = nodemailer.createTransport('smtps://' + auth_user + ':' + auth_pass + '@' + auth_host);
+
             // setup e-mail data with unicode symbols 
             var mailOptions = {
                 from: auth_user, // sender address 
@@ -26,10 +26,10 @@ module.exports=function(){
                 text: message, // plaintext body 
                 html: message // html body 
             };
-            
+
             // send mail with defined transport object 
-            transporter.sendMail(mailOptions, function(error, info){
-                if(error){
+            transporter.sendMail(mailOptions, function (error, info) {
+                if (error) {
                     return console.log(error);
                 }
                 console.log('Message sent: ' + info.response);
@@ -37,6 +37,6 @@ module.exports=function(){
             });
 
         },
-        
+
     }
 };

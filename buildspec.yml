@@ -1,0 +1,41 @@
+version: 0.2
+#help found at https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html
+# env:
+#   variables:
+#     JAVA_HOME: "/usr/lib/jvm/java-8-openjdk-amd64"
+#   parameter-store:
+#     LOGIN_PASSWORD: /CodeBuild/dockerLoginPassword
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 10
+    # commands:
+    #   - echo Entered the install phase...
+    #   - apt-get update -y
+    #   - apt-get install -y maven
+    # finally:
+    #   - echo This always runs even if the update or install command fails 
+  # pre_build:
+  #   commands:
+  #     - echo Entered the pre_build phase...
+  #     - docker login –u User –p $LOGIN_PASSWORD
+  #   finally:
+  #     - echo This always runs even if the login command fails 
+  build:
+    commands:
+      - echo Entered the build phase...
+      - echo Build started on `date`
+      - npm install
+    finally:
+      - echo Build finished
+  post_build:
+    commands:
+      - echo Entered the post_build phase...
+      - echo Build completed on `date`
+artifacts:
+  files: 
+    - '**/*'
+# cache:
+#   paths:
+#     - '**/*'

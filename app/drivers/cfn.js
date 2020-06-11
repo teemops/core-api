@@ -3,6 +3,7 @@ var awsTask=require("../../app/drivers/awsTask");
 var file=require("../../app/drivers/file");
 var log=require("../../app/drivers/log");
 const STATE_COMPLETED="CREATE_COMPLETE";
+const STATE_UPDATED="UPDATE_COMPLETE";
 const STACK_STATE_ACTIVE="ACTIVE";
 const STACK_INSTANCE_STATUS_OK="CURRENT";
 const ERROR_CODE_NOSTACK=400;
@@ -87,11 +88,13 @@ async function waitFor(waitCommand, params){
  * @param {*} parameters 
  * @param {*} wait 
  * @param {*} url Is the template a URL or local file?
+ * @param {*} notify Whether or not to send an SNS notification back once CFN CREATE is done
  */
-async function createStack(label, templateName, parameters=null, wait=false, url=false, notify=true){
+async function createStack(label, templateName, parameters=null, wait=false, url=false, notify=true, update=false){
     try{
 
         var stackName="teemops-"+label;
+        
         if(url){
             
             const template=templatesURL+templateName+".cfn.yaml";
@@ -116,25 +119,36 @@ async function createStack(label, templateName, parameters=null, wait=false, url
                 ]
             };
         }
+
         var notifyARN='arn:aws:sns:'+cfn.config.region+':'+awsAccountId+':'+snsTopicName;
+        
         if(notify){
             params.NotificationARNs=[notifyARN];
         }
-        const result=await cfnTask('createStack', params);
+        
+        var result;
+
+        if(update){
+            result=await cfnTask('updateStack', params);
+        }else{
+            result=await cfnTask('createStack', params);
+        }
         
         if(wait){
             //await sleep(2000);
-            const waitResult=await checkStackStatus(stackName);
+            const waitResult=await checkStackStatus(stackName, update);
             return waitResult;
         }else{
             return result;
         }
         
     }catch(e){
+        
         if(e.code==="AlreadyExistsException"){
             const waitResult=await checkStackStatus(stackName);
             return waitResult;
         }
+
         throw e;
     }
 }
@@ -154,6 +168,7 @@ async function deleteStack(label, wait=false){
         var params = {
             StackName: stackName
         };
+        
         const result=await cfnTask('deleteStack', params);
         
         if(wait){
@@ -351,7 +366,7 @@ async function checkStackSetExists(stackSetName){
  */
 async function getStackOutputs(stackName){
     var params = {
-        StackName: stackName
+        StackName: 'teemops-'+stackName
     };
     try{
         const describeStacks= await cfnTask('describeStacks', params);
@@ -369,17 +384,27 @@ async function getStackOutputs(stackName){
     
 }
 
-async function checkStackStatus(stackName){
+async function checkStackStatus(stackName, update=false){
     var params={
         StackName: stackName
     }
     try{
-        const wait=await waitFor('stackCreateComplete', params);
-        if(wait.StackStatus==STATE_COMPLETED){
-            if(wait.Stacks[0].Outputs[0].OutputKey=='BucketName'){
-                return wait.Stacks[0].Outputs[0].OutputValue;
+        if(update){
+            const wait=await waitFor('stackUpdateComplete', params);
+            if(wait.StackStatus==STATE_UPDATED){
+                if(wait.Stacks[0].Outputs[0].OutputKey=='BucketName'){
+                    return wait.Stacks[0].Outputs[0].OutputValue;
+                }
+            }
+        }else{
+            const wait=await waitFor('stackCreateComplete', params);
+            if(wait.StackStatus==STATE_COMPLETED){
+                if(wait.Stacks[0].Outputs[0].OutputKey=='BucketName'){
+                    return wait.Stacks[0].Outputs[0].OutputValue;
+                }
             }
         }
+        
     }catch(e){
         if(e.code=="ResourceNotReady"){
             return true;
@@ -391,6 +416,9 @@ async function checkStackStatus(stackName){
 /**
  * Converts an object to an Array of CloudFormation compatible
  * ParameterKey/ParameterValue pairs.
+ * 
+ * If a parameter is null it won't be added to the Parameters list
+ * 
  * @param {*} params just an object
  */
 function getParams(params){
@@ -399,10 +427,24 @@ function getParams(params){
         return cfnParamsArray;
     }
     Object.keys(params).forEach(function(value, index, array){
-        cfnParamsArray.push({
-            ParameterKey: value,
-            ParameterValue: params[value].toString()
-        });
+        try{
+            if(params[value]!=null){
+                cfnParamsArray.push({
+                    ParameterKey: value,
+                    ParameterValue: params[value].toString()
+                });
+            }
+            // else{
+            //     const error={
+            //         code: "NullParameter",
+            //         message: "Parameter "+ value + " does not exist."
+            //     }
+            //     throw error;
+            // }
+            
+        }catch(e){
+            throw e;
+        }
     });
     return cfnParamsArray;
 }

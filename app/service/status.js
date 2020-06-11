@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 /**
  * updates the status of Apps from the SQS Queue
  * Source and data flow:
@@ -30,55 +31,55 @@ const CFN_STATUS = {
     CREATE_IN_PROGRESS: STATUS_TYPES.starting,
     CREATE_COMPLETE: STATUS_TYPES.started
 }
-const EC2_STATUS=[
+const EC2_STATUS = [
     'stopped',
     'stopping',
     'running',
     'pending'
 ]
-var util  = require('util'),
+var util = require('util'),
     spawn = require('child_process').spawn;
 
 var config = require('config-json');
-var log=require('../drivers/log.js');
+var log = require('../drivers/log.js');
 config.load('./app/config/config.json');
 var appQ = require("../../app/drivers/sqs.js");
-var userController = require("../controllers/UserController.js"); 
-var appController = require("../controllers/AppController.js"); 
-var resourceController = require("../controllers/ResourceController.js"); 
+var userController = require("../controllers/UserController.js");
+var appController = require("../controllers/AppController.js");
+var resourceController = require("../controllers/ResourceController.js");
 
-var jobQ=appQ();
-var myUsers=userController();
-var myApps=appController();
-var resource=resourceController();
+var jobQ = appQ();
+var myUsers = userController();
+var myApps = appController();
+var resource = resourceController();
 resource.init(config);
 
-var defaultQs=jobQ.getQs();
+var defaultQs = jobQ.getQs();
 console.log('Running status service... Ctrl-C to stop. Use supervisor to run as a service on OS.');
 console.log(defaultQs.jobsq + " is the default JOBS Q");
 
-var code=0;
+var code = 0;
 var qURL;
 
-const start=async function(){
-    try{
-        qURL=await jobQ.readQURL(defaultQs.jobsq);
-    }catch(e){
+const start = async function () {
+    try {
+        qURL = await jobQ.readQURL(defaultQs.jobsq);
+    } catch (e) {
         throw e;
     }
-    
+
     myService();
 }
 start();
 
-const myService=async function service(){
+const myService = async function service() {
 
-    try{
-        const message=await jobQ.readitem(qURL, 10);
-        if(message.Messages!=undefined){
+    try {
+        const message = await jobQ.readitem(qURL, 10);
+        if (message.Messages != undefined) {
             log.out(0, "Processing messages from Queue...", log.LOG_TYPES.INFO);
-            var value=message.Messages[0];
-            var key=0;
+            var value = message.Messages[0];
+            var key = 0;
             message.Messages.forEach(async function (value, key) {
                 var msgBody = JSON.parse(value.Body.toString());
 
@@ -87,39 +88,39 @@ const myService=async function service(){
                     throw err;
                 }
 
-                const statusResult=await updateStatus(msgBody.Message);
-                if(statusResult){
-                    const removeResult=await removeMessage(qURL, value);
-                    if(removeResult){
-                        console.log('PROCESSED MessageId '+ message.Messages[key].MessageId);
+                const statusResult = await updateStatus(msgBody.Message);
+                if (statusResult) {
+                    const removeResult = await removeMessage(qURL, value);
+                    if (removeResult) {
+                        console.log('PROCESSED MessageId ' + message.Messages[key].MessageId);
                     }
-                }else{
-                    const removeResult=await removeMessage(qURL, value);
-                    if(removeResult){
-                        console.log('ERROR: PURGED MessageId '+ message.Messages[key].MessageId);
+                } else {
+                    const removeResult = await removeMessage(qURL, value);
+                    if (removeResult) {
+                        console.log('ERROR: PURGED MessageId ' + message.Messages[key].MessageId);
                     }
                 }
             });
-            
-        }else{
+
+        } else {
             log.out(404, "No messages to process yet...", log.LOG_TYPES.INFO);
         }
-        
-    }catch(e){
-        console.log("Error: "+e);
+
+    } catch (e) {
+        console.log("Error: " + e);
         throw e;
     }
     myService();
     await waiting(WAIT_TIME);
-    
+
 }
 
 
-function waiting(ms){
-    return new Promise(resolve=>setTimeout(resolve, ms));
+function waiting(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-if(code===1){
+if (code === 1) {
     console.log('exiting');
     process.exit();
 }
@@ -129,94 +130,96 @@ if(code===1){
  * 
  * @param {*} Message 
  */
-async function updateStatus(Message){
+async function updateStatus(Message) {
     var event = getNotification(Message);
-    if(event==null){
+    if (event == null) {
         return true;
     }
-    try{
-        if (event.notifcationType==NOTIFICATION_TYPES.cfn){
-            var appId=getAppId(event);
+    try {
+        log.out('INFO', 'CFN SQS Message', log.LOG_TYPES.DEBUG)
+        log.out('INFO', JSON.stringify(event, null, 4), log.LOG_TYPES.DEBUG)
+        if (event.notifcationType == NOTIFICATION_TYPES.cfn) {
+            var appId = getAppId(event);
 
-            if (event.ResourceStatus.toString().indexOf('CREATE_COMPLETE')>=0 && event.ResourceType.toString().indexOf('Stack')>=0) {
+            if (event.ResourceStatus.toString().indexOf('CREATE_COMPLETE') >= 0 && event.ResourceType.toString().indexOf('Stack') >= 0) {
                 console.log("Updating App Status");
                 //update App Status
-                var result=await myApps.updateStatusFromNotify(appId, 'cfn.create');
-                if(result.error!=undefined){
+                var result = await myApps.updateStatusFromNotify(appId, 'cfn.create', 'completed', true);
+                if (result.error != undefined) {
                     throw result.error;
                 }
                 return true;
-            } else if (event.ResourceStatus.toString().indexOf('CREATE_COMPLETE')>=0 && event.LogicalResourceId.toString() === 'TopsEc2') {
+            } else if (event.ResourceStatus.toString().indexOf('CREATE_COMPLETE') >= 0 && event.LogicalResourceId.toString() === 'TopsEc2') {
                 console.log("Updating Instance Details");
-                var data=JSON.parse(event.ResourceProperties);
-                
-                var instanceId=event.PhysicalResourceId;
-                var instance=await resource.describeInstance(appId, instanceId);
-                data['Instances']=instance;
+                var data = JSON.parse(event.ResourceProperties);
+
+                var instanceId = event.PhysicalResourceId;
+                var instance = await resource.describeInstance(appId, instanceId);
+                data['Instances'] = instance;
                 return await myApps.updateMetaData(appId, JSON.stringify(data));
-            } else if(event.ResourceStatus.toString().indexOf('PROGRESS')>=0){
+            } else if (event.ResourceStatus.toString().indexOf('PROGRESS') >= 0) {
                 //do nothing if PROGRESS except return true so we can discard the message
                 return true;
-            } else if (event.ResourceStatus.toString().indexOf('DELETE_COMPLETE')>=0 && event.ResourceType.toString().indexOf('Stack')>=0) {
+            } else if (event.ResourceStatus.toString().indexOf('DELETE_COMPLETE') >= 0 && event.ResourceType.toString().indexOf('Stack') >= 0) {
                 console.log("DELETED App");
                 //update App Status
                 var result = await myApps.updateStatusFromNotify(appId, 'cfn.delete');
-                if(result.error!=undefined){
+                if (result.error != undefined) {
                     throw result.error;
                 }
                 return true;
-            } else if (event.ResourceStatus.toString().indexOf('CREATE_FAILED')>=0 && event.LogicalResourceId.toString() === 'TopsEc2'){
+            } else if (event.ResourceStatus.toString().indexOf('CREATE_FAILED') >= 0 && event.LogicalResourceId.toString() === 'TopsEc2') {
                 console.log("Instance launch failure due to AWS CloudFormation Error");
-                var data=JSON.parse(event.ResourceProperties);
+                var data = JSON.parse(event.ResourceProperties);
                 //update App Status
                 var result = await myApps.updateStatusFromNotify(appId, 'cfn.fail', event.ResourceStatusReason);
-                if(result.error!=undefined){
+                if (result.error != undefined) {
                     throw result.error;
                 }
                 return true;
-            } else{
+            } else {
                 console.log("Discarding message - not relevant");
                 return true;
             }
-        }else{
-            if(event.source==NOTIFICATION_TYPES.ec2){
+        } else {
+            if (event.source == NOTIFICATION_TYPES.ec2) {
                 //get instance Id
-                var instanceId=event.detail['instance-id'];
-                var awsAccountId=event.account;
-                var appId=await resource.getAppIdFromMeta(instanceId, awsAccountId);
-                if(appId==null){
-                    var error={
+                var instanceId = event.detail['instance-id'];
+                var awsAccountId = event.account;
+                var appId = await resource.getAppIdFromMeta(instanceId, awsAccountId);
+                if (appId == null) {
+                    var error = {
                         code: 404,
                         message: 'AppId is not able to be located, because it is either already deleted or not connected to an Instance in AWS.'
                     };
                     throw error;
                 }
-                switch(event.detail['state']){
+                switch (event.detail['state']) {
                     case 'stopped':
                         console.log("Updating App Status to Stopped");
                         //update App Status
-                        var result=await myApps.updateStatusFromNotify(appId, 'cw.stopped');
-                        if(result.error!=undefined){
+                        var result = await myApps.updateStatusFromNotify(appId, 'cw.stopped');
+                        if (result.error != undefined) {
                             throw result.error;
                         }
                         break;
                     case 'running':
                         console.log("Updating App Status to Running");
                         //update meta data for instance(s)
-                        var metaData=await resource.getMetaData(appId);
-                        if(metaData!=null){
-                            var data=JSON.parse(metaData);
-                            var instance=await resource.describeInstance(appId, instanceId);
-                            data['Instances']=instance;
+                        var metaData = await resource.getMetaData(appId);
+                        if (metaData != null) {
+                            var data = JSON.parse(metaData);
+                            var instance = await resource.describeInstance(appId, instanceId);
+                            data['Instances'] = instance;
                             var updateResult = await myApps.updateMetaData(appId, JSON.stringify(data));
-                            if(updateResult){
+                            if (updateResult) {
                                 console.log("Meta data updated for App");
                             }
                         }
 
                         //update App Status
-                        var result=await myApps.updateStatusFromNotify(appId, 'cw.running');
-                        if(result.error!=undefined){
+                        var result = await myApps.updateStatusFromNotify(appId, 'cw.running');
+                        if (result.error != undefined) {
                             throw result.error;
                         }
                         break;
@@ -226,9 +229,9 @@ async function updateStatus(Message){
                 return true;
             }
         }
-        
-    }catch(e){
-        if(e.code==404){
+
+    } catch (e) {
+        if (e.code == 404) {
             //we assume this App/Instance has already been processed and/or since deleted.
             log.out(e.code, e.message, log.LOG_TYPES.WARNING)
             return true;
@@ -237,19 +240,20 @@ async function updateStatus(Message){
     }
 }
 
+
 /**
  * Remove SQS Message by given ID
  * @param {*} MessageId 
  */
-async function removeMessage(qURL, Message){
-    try{
-        const message=await jobQ.removeitem(qURL, Message);
+async function removeMessage(qURL, Message) {
+    try {
+        const message = await jobQ.removeitem(qURL, Message);
 
         return true;
-    }catch(e){
+    } catch (e) {
         throw e;
     }
-    
+
 }
 
 /**
@@ -260,37 +264,37 @@ async function removeMessage(qURL, Message){
  */
 function getNotification(Message) {
 
-    
-    var newObject=getMessageLines(Message);
+
+    var newObject = getMessageLines(Message);
 
     //check if newObject is a line separated notification or JSON
-    if(newObject!=undefined){
-        if(newObject.ResourceStatus!=undefined){
-            newObject['notifcationType']= NOTIFICATION_TYPES.cfn;
+    if (newObject != undefined) {
+        if (newObject.ResourceStatus != undefined) {
+            newObject['notifcationType'] = NOTIFICATION_TYPES.cfn;
         }
-    }else{
-        try{
-            newObject=JSON.parse(Message);
-        }catch(e){
+    } else {
+        try {
+            newObject = JSON.parse(Message);
+        } catch (e) {
             return null;
         }
-        if(newObject.source!=undefined){
-            newObject['notifcationType']= newObject.source;
+        if (newObject.source != undefined) {
+            newObject['notifcationType'] = newObject.source;
         }
     }
 
     return newObject;
-    
-    
+
+
 }
 
-function getMessageLines(Message){
-    var newObject={
+function getMessageLines(Message) {
+    var newObject = {
         topscode: 'teemops'
     };
     var messageLines = Message.split('\n');
-    if(messageLines.length==1){
-        newObject=null;
+    if (messageLines.length == 1) {
+        newObject = null;
     }
     var key, value;
     messageLines.forEach(element => {
@@ -317,14 +321,13 @@ function getAppId(cfnStack) {
     return parseInt(cfnStack.StackName.split('-')[2]);
 }
 
-function getInstanceId(ec2Event){
+function getInstanceId(ec2Event) {
 
 }
 
-function getCustomerId(cfnStack){
-    var instanceData=JSON.parse(cfnStack.ResourceProperties);
-    var tags=instanceData.Tags;
-    var tag=tags.filter(tag=>tag.Key=='topscustomerid');
+function getCustomerId(cfnStack) {
+    var instanceData = JSON.parse(cfnStack.ResourceProperties);
+    var tags = instanceData.Tags;
+    var tag = tags.filter(tag => tag.Key == 'topscustomerid');
     return tag[0].Value;
 }
-

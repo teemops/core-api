@@ -6,7 +6,11 @@
     "start-test": "MODE=test node server.js",
     "start-prod": "source app/config/prod.env; node server.js",
     "status-dev": "MODE=dev node app/service/status.js",
+    "status-test": "MODE=test node app/service/status.js",
+    "status-prod": "MODE=prod node app/service/status.js",
     "pricing-dev": "MODE=dev node app/service/pricing.js",
+    "pricing-test": "MODE=test node app/service/pricing.js",
+    "pricing-prod": "MODE=prod node app/service/pricing.js",
     "build-images": "MODE=dev node app/service/buildimages.js",
     "tsc": "tsc"
   },
@@ -18,19 +22,22 @@
     "express": ">=4.5.0",
     "express-validator": "^5.3.0",
     "jmespath": "^0.15.0",
+    "js-yaml": "^3.13.1",
     "jsonwebtoken": "^5.7.0",
-    "lodash": ">=4.17.5",
+    "lodash": ">=4.17.15",
+    "mime": ">=1.4.1",
     "mysql": "^2.16.0",
     "nodemailer": "",
-    "uuid": "^3.0",
-    "mime": ">=1.4.1"
+    "uuid": "^3.0"
   },
   "devDependencies": {
     "eslint": "^5.12.0",
+    "eslint-utils": "2.0.0",
     "jasmine": "^2.99.0",
     "mocha": "^5.2.0",
     "nodemon": "^1.18.9"
   },
   "author": "Ben Fellows <kiwifellows@gmail.com>",
-  "license": "gpl-3.0"
+  "license": "gpl-3.0",
+  "version": "1.2.0"
 }

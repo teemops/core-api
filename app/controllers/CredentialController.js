@@ -8,22 +8,18 @@ var mydb= mysql();
 
 module.exports=function(){
     return {
-      addUserDataProvider: function(data, cb) {
+      addUserDataProvider: async function(data, cb) {
 
         var sql = "CALL sp_insertUserDataProvider (?, ?, ?)";
-
         var params = [data.userCloudProviderId, data.awsAuthMethod, data.authData];
 
-        mydb.insertSP(
-            sql, params,
-            function(err, result){
-                if (err) throw err;
+        try{
+          const result=await mydb.insertSPPromise(sql, params);
+          return result;
+        }catch(e){
+          throw e;
+        }
 
-                if(result!=null){
-                    cb(null, result);
-                }
-            }
-        );
       },
 
       updateUserDataProvider: function(data, cb) {

@@ -16,11 +16,6 @@ router.get('/', function(req, res) {
   res.send('Users API Documentation');
 });
 
-// define the list page route
-router.get('/list', function(req, res) {
-  res.json({ userid: '1', name: 'ben', email: 'sdsdds@sdjnsjkdn.com' }); 
-});
-
 /**
  * @author: Ben Fellows <ben@teemops.com>
  * @description: add a user
@@ -39,15 +34,14 @@ router.get('/list', function(req, res) {
  * }
  * 
  */
-router.put('/', function(req, res) {
-    myUser.addUser(
-        req.body,
-        function(err, result){
-            if (err) { res.json({ err });  }
-            var userid=result;
-             res.json({ userid }); 
-        }
-    );
+router.put('/', async function(req, res) {
+
+    try{
+        const userId=await myUser.addUser(req.body);
+        res.json({ userId });
+    }catch(e){
+        res.status(e.status).send({error:e});
+    }
 
 });
 
@@ -64,7 +58,6 @@ router.get('/confirm/:code?', function(req, res) {
 router.get('/check/:user?', function(req, res) {
     myUser.doesUserExist(req.params,
     function (err, result){
-        console.log("User exists: "+result);
         res.json({ result });
     }
   );
@@ -95,6 +88,8 @@ router.get('/:id?', auth, function(req, res) {
 /**
  * @author: Ben Fellows <ben@teemops.com>
  * @description: search and filter for users
+ * Only used for checking if a requested username exists.
+ * 
  * @usage: request header needs to include
  * POST /<api_base>/users/search/<query>
  * 
@@ -123,7 +118,18 @@ router.post('/login', function(req, res) {
   );
 });
 
+router.post('/reset', function(req, res) {
+    myUser.loginUser(req.body,
+    function (err, token){
+        if (err) { 
+            res.json({ err });  
+        }else{
+            res.json( token );
+        }
 
-
+        
+    }
+  );
+});
 
 module.exports = router;

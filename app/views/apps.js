@@ -10,12 +10,12 @@ var appControlller = require("../../app/controllers/AppController.js");
 var jobController = require("../../app/controllers/JobController.js");
 var eventController = require("../../app/controllers/EventController.js");
 var resourceController=require("../controllers/ResourceController");
-
+var log=require('../../app/drivers/log.js');
 var express = require('express');
 var bodyParser = require('body-parser');
 var jmespath=require('jmespath');
-var auth = require("../../app/utils/auth.js");
-
+var security = require('../../app/security/index');
+var log=require('../../app/drivers/log.js');
 var router = express.Router();
 var myApps=appControlller();
 var myJobs=jobController();
@@ -25,7 +25,8 @@ var resource=resourceController();
 //Body Parser required to use json and other body data sent in request
 //router.use(bodyParser.urlencoded({ extended: false }));
 router.use(bodyParser.json());
-router.use(auth);
+// Authentication middleware
+router.use(security.middleware);
 
 //Auth middleware for all routes in this view
 myApps.init(config);
@@ -111,16 +112,14 @@ router.get('/list', function(req, res) {
  * @usage: request header needs to include
  * GET /<api_base>/apps/<appid>
  */
-router.get('/:id?', function(req, res) {
+router.get('/:id?', async function(req, res) {
     console.log(req.params.id);
-    myApps.getAppByIDAuth(
-        req.auth_userid,
-        req.params.id,
-        function (outputList){
-            console.log("App Data for appID: "+outputList);
-            res.json(outputList);
-        }
-    );
+    try{
+        const app=await myApps.getAppByIDAuth(req.auth_userid, req.params.id);
+        res.json(app);
+    } catch(e){
+        res.json({error:e});
+    }
 
 });
 
@@ -134,22 +133,15 @@ router.get('/:id?', function(req, res) {
  * appurl: <app_url>
  * }
  */
-router.put('/', function(req, res) {
+router.put('/', async function(req, res) {
     try{
-        myApps.addApp(
-            req.auth_userid,
-            req.body,
-            function (outputMessage){
-                console.log("ID Added for new app: "+outputMessage);
-                res.json(outputMessage);
-            }
-        );
+        const result=await myApps.addApp(req.auth_userid, req.body);
+        res.json({appid: result});
     }catch(e){
         res.json({error:e});
     }finally {
         console.log("Processing completed for adding app.");
     }
-
 });
 
 /**
@@ -287,16 +279,21 @@ router.put('/job', async function(req, res) {
 router.post('/launch', async function(req, res) {
     //console.log("PUT app/job function Req.body.appid"+req.body.appid);
 
-    var adddata={userid: req.auth_userid, appid: req.body.appid, action: req.body.action, task: req.body.task};
+    var addData={userid: req.auth_userid, appid: req.body.appid, action: req.body.action, task: req.body.task};
 
     if(req.auth_userid!=req.body.userid){
-        console.log("User "+req.auth_userid+" is not authorised to launch apps for "+req.body.userid);
-        res.json({status: "authorisation error"});
+        res.json(log.error(log.EXCEPTIONS.forbidden, "User is not authorised to launch"));
     }else{
         try{
-            const jobData=await myJobs.launchApp(req.auth_userid,adddata);
+            var jobData;
+            if(addData.action=='update'){
+                jobData=await myJobs.launchApp(req.auth_userid,addData, true);
+            }else{
+                jobData=await myJobs.launchApp(req.auth_userid,addData);
+            }
+            
             console.log("Queue data: "+jobData);
-            const response=await myApps.updateAppStatus(req.auth_userid, req.body.appid, adddata.action);
+            const response=await myApps.updateAppStatus(req.auth_userid, req.body.appid, addData.action);
         
             if(response && !response.error){
                 console.log("Status "+ response);
@@ -306,7 +303,44 @@ router.post('/launch', async function(req, res) {
                 throw "Unkown error in updateAppStatus";
             }
         }catch(e){
-            res.json({status: "Error adding a job."});
+            res.json(e);
+        }
+    }
+});
+
+
+/**
+ * @author: Ben Fellows <ben@teemops.com>
+ * @description: Deploys Code to App
+ * @usage: request data needs to include
+ * {
+ * userid: <user_id>,
+ * action: <action>, e.g. start, stop, remove
+ * appid: <app_id>
+ * }
+ */
+router.post('/deploy', async function(req, res) {
+    //console.log("PUT app/job function Req.body.appid"+req.body.appid);
+
+    var addData={userid: req.auth_userid, appid: req.body.appid, action: req.body.action, task: req.body.task};
+
+    if(req.auth_userid!=req.body.userid){
+        res.json(log.error(log.EXCEPTIONS.forbidden, "User is not authorised to deploy"));
+    }else{
+        try{
+            var jobData = await myJobs.deployCode(req.auth_userid,addData);
+            
+            console.log("Queue data: "+jobData);
+ 
+            if(response && !response.error){
+                console.log("Status "+ response);
+                //myEvents.publishUpdateForApp(req.body.userid, req.body.appid);
+                res.json({status: response});
+            }else{
+                throw "Unkown error in updateAppStatus";
+            }
+        }catch(e){
+            res.json({status: "Error adding a job.", details: e});
         }
     }
 });
@@ -342,8 +376,7 @@ router.post('/task/:task?', async function(req, res){
             }
         );
     }else{
-        console.log("User "+req.auth_userid+" is not authorised to launch apps for "+req.body.userid);
-        res.json({status: "authorisation error"});
+        res.json(log.error(log.EXCEPTIONS.forbidden, "User is not authorised"));
     }
 
 });
@@ -355,18 +388,19 @@ router.post('/task/:task?', async function(req, res){
  * GET /<api_base>/apps/infra/<appid>
  */
 router.get('/infra/:id?', async function(req, res) {
-    console.log(req.params.id);
-    try{
-        var result=await myApps.getAppInfra(req.auth_userid, req.params.id);
-        if(result!=null){
-            res.json({result: result});
-        }else{
-            res.json({error: 'No infrastructure for this app yet.'})
+    if(req.auth_userid==req.body.userid){
+        try{
+            var result=await myApps.getAppInfra(req.auth_userid, req.params.id);
+            if(result!=null){
+                res.json({result: result});
+            }else{
+                res.json({error: 'No infrastructure for this app yet.'})
+            }
+        }catch(e){
+            res.json({error:e});
         }
-
-    }catch(e){
-        res.json({error:"Processing error"});
-        console.log(e);
+    }else{
+        res.json(log.error(log.EXCEPTIONS.forbidden, "User is not authorised"));
     }
     
 
@@ -416,6 +450,39 @@ router.post('/ec2', async function(req, res){
 });
 
 /**
+ * AWS Task 'at'
+ * This runs a generic AWS Task
+ * 
+ * Expected Input
+{
+    "awsAccountId": 123,
+    "className": "ACM",
+    "task": "listCertificates",
+    "params": {},
+    "region": "ap-southeast-2"
+}
+ */
+router.post('/general', async function(req, res){
+    
+    try{
+        var result=await resource.genericTask(req.auth_userid, req.body.awsAccountId, req.body.className, req.body.task, req.body.params,req.body.region);
+        if(result!=null){
+            if(req.body.filter!=undefined){
+                result=jmespath.search(result, req.body.filter);
+            }
+            res.json({data: result});
+        }else{
+            res.json({error: 'Generic Task returned no results'})
+        }
+
+    }catch(e){
+        res.json({error:"Processing error"});
+        console.log(e);
+    }
+    
+});
+
+/**
  * request example:
  * {
  *      "awsAccountId":"1234556",
@@ -443,6 +510,41 @@ router.post('/pricing', async function(req, res){
         console.log(e);
     }
     
+});
+
+/**
+ * request example:
+ * {
+ *      "awsAccountId":"1234556",
+ *      "region": "us-west-2"
+ * }
+ */
+router.post('/key', async function(req, res){
+
+    try{
+        var result=await myApps.getKey(req.auth_userid, req.body.region, req.body.awsAccountId)
+        if(result!=null){
+            res.json({data: result});
+        }else{
+            res.json({error: 'Key returned no results'})
+        }
+
+    }catch(e){
+        res.json({error:"Couldn't get key"});
+        console.log(e);
+    }
+
+    
+    
+});
+
+router.post('/alb', async function(req, res){
+    try{
+        const result=await myApps.updateAlb(req.body);
+        res.json({result: result});
+    }catch(e){
+        res.json({error:e});
+    }
 });
 
 module.exports = router;
