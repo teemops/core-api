@@ -85,25 +85,6 @@ router.get('/:id?', auth, function(req, res) {
     }
 });
 
-/**
- * @author: Ben Fellows <ben@teemops.com>
- * @description: search and filter for users
- * Only used for checking if a requested username exists.
- * 
- * @usage: request header needs to include
- * POST /<api_base>/users/search/<query>
- * 
- */
-router.get('/search/:q?', function(req, res) {
-    console.log(req.params.q);
-    myUser.searchUsers(req.params.q,
-        function (outputList){
-            console.log("User Data for query: "+outputList);
-            res.json(outputList); 
-        }
-    );
-});
-
 router.post('/login', function(req, res) {
     myUser.loginUser(req.body,
     function (err, token){

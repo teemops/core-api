@@ -314,34 +314,6 @@ module.exports = function () {
                 .update(str)
                 .digest('hex');
             return hash;
-        },
-
-
-        /**
-         * @author: Ben Fellows <ben@teemops.com>
-         * @description: Gets users by searching
-         * @usage: request data should include query
-         * resource to select users based on search query
-         */
-        searchUsers: function searchUsers(searchQuery, cb) {
-            var searchString = mydb.escape('%' + searchQuery + '%');
-            var sql = "SELECT username FROM user WHERE username LIKE ? OR email LIKE ? OR last LIKE ? OR first LIKE ?";
-            var params = [searchString];
-
-            //query database with sql statement and retrun results or error through callback function
-            mydb.query(
-                sql, params,
-                function (err, results) {
-                    if (err) throw err;
-
-                    if (results != null) {
-                        console.log(results);
-                        cb(results);
-                    } else {
-                        cb("No rows");
-                    }
-                }
-            );
         }
     }
 };
