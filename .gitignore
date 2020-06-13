@@ -36,3 +36,4 @@ Desktop.ini
 # Custom Teemops and MySQL
 ######################
 /mysql/**
+!/mysql/docker-compose.yaml

@@ -1,14 +1,12 @@
-var schemas = require("../../app/models/");
-var appData = require("../../app/drivers/dynamo.js");
+var config = require('config-json');
+config.load('./app/config/config.json');
+
 var mysql = require("../../app/drivers/mysql.js");
 var mail = require("../../app/drivers/mail.js");
 var configService = require("../../app/drivers/configDriver.js");
 var jwtController = require("../../app/controllers/JWTController.js");
 var log = require('../drivers/log.js');
 
-var config = require('config-json');
-config.load('./app/config/config.json');
-const crypto = require('crypto');
 var util = require('util');
 var _ = require("lodash");
 var express = require('express');
@@ -17,6 +15,9 @@ var myEmail = mail();
 var myJWT = jwtController();
 var router = express.Router();
 var cfg = configService();
+
+var password = require('../../app/auth/password')
+var pass = password(config)
 
 myEmail.init(config);
 
@@ -78,7 +79,7 @@ module.exports = function () {
         loginUser: function loginUser(data, cb) {
 
             var sql = "SELECT userid, username, status FROM user WHERE email = ? AND password = MD5(?)";
-            var params = [data.email, this.createPassword(data.password)];
+            var params = [data.email, pass.create(data.password)];
 
             mydb.query(
                 sql, params,
@@ -129,13 +130,13 @@ module.exports = function () {
 
             var defaultStatus = 0; //disabled by default
             var timeNow = Date.now();
-            var confirmCode = this.createConfirmCode(data.username + data.email + timeNow);
+            var confirmCode = pass.confirm(data.username + data.email + timeNow);
             var sql = "INSERT INTO user(email, username, password, status, timestamp, confirmcode, first, last)";
             sql += " VALUES(?, ?, MD5(?), ?, ?, ?, ?, ?)";
             var params = [
                 data.email,
                 data.username,
-                this.createPassword(data.password),
+                pass.create(data.password),
                 defaultStatus,
                 timeNow,
                 confirmCode,
@@ -181,58 +182,6 @@ module.exports = function () {
                 );
             };
 
-        },
-        requestPass: function requestPass(userName, cb) {
-            var sql = "UPDATE user SET password=MD5(?) where userid=?";
-            var params = [
-                this.createPassword(data.password),
-                authUserid
-            ];
-
-            //insert query with sql, parameters and return results or error through callback function
-            mydb.update(
-                sql, params,
-                function (err, results) {
-                    if (err) throw err;
-
-                    if (results != null) {
-                        console.log(results);
-                        cb({
-                            result: results
-                        });
-                    } else {
-                        cb({
-                            error: "update_error"
-                        });
-                    }
-                }
-            );
-        },
-        updatePass: function updatePass(authUserid, pass, cb) {
-            var sql = "UPDATE user SET password=MD5(?) where userid=?";
-            var params = [
-                this.createPassword(data.password),
-                authUserid
-            ];
-
-            //insert query with sql, parameters and retrun results or error through callback function
-            mydb.update(
-                sql, params,
-                function (err, results) {
-                    if (err) throw err;
-
-                    if (results != null) {
-                        console.log(results);
-                        cb({
-                            result: results
-                        });
-                    } else {
-                        cb({
-                            error: "update_error"
-                        });
-                    }
-                }
-            );
         },
         updateUser: function updateUser(authUserid, data, cb) {
             var sql = "UPDATE user SET first=?, last=? where userid=?";
@@ -280,40 +229,6 @@ module.exports = function () {
                     }
                 }
             );
-        },
-        /**
-         * TODO: 
-         * This needs minimum scrypt functionality found in https://github.com/barrysteyn/node-scrypt
-         * 
-         * TODO:
-         * This needs to be moved to a security driver - potentially using
-         * an internal OS provided library (scrypt C++ implementation)
-         * or external KMS type service, which has
-         * more robust protecion and means secret will be not stored on OS, only
-         * available in protected memory for app as required. 
-         * 
-         * TODO:
-         * At the moment this is not the best place
-         * to have a function that handles security - would be too easy for 
-         * someone to accidentally make a change and then do a PR that
-         * causes this to be overlooked as part of that PR.
-         * @param {*} str 
-         */
-        createPassword: function createPassword(str) {
-            config.load('./app/config/config.json');
-
-            var hash = crypto.createHmac('sha256', config.get("mysecrets", "secret"))
-                .update(str)
-                .digest('hex');
-            return hash;
-        },
-        createConfirmCode: function createConfirmCode(str) {
-            config.load('./app/config/config.json');
-
-            var hash = crypto.createHmac('sha256', config.get("mysecrets", "confirm_secret"))
-                .update(str)
-                .digest('hex');
-            return hash;
         }
     }
 };

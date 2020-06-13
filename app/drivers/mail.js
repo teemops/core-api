@@ -30,10 +30,12 @@ module.exports = function () {
             // send mail with defined transport object 
             transporter.sendMail(mailOptions, function (error, info) {
                 if (error) {
-                    return console.log(error);
+                    callback(error, null)
+                } else {
+                    console.log('Message sent: ' + info.response);
+                    callback(null, true)
                 }
-                console.log('Message sent: ' + info.response);
-                return true;
+
             });
 
         },
