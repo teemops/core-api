@@ -25,6 +25,7 @@ module.exports = function () {
         },
         getKey: async function getKey(userId, region, awsAccountId) {
             const result = await key.get(userId, region, awsAccountId);
+            return result;
         },
         getAppByIDAuth: async function getAppByIDAuth(authUserid, appID, cb) {
             var sql = "CALL sp_getAppByUserID(?,?)";

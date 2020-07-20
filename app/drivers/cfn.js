@@ -1,33 +1,33 @@
-var AWS = require('aws-sdk'); 
-var awsTask=require("../../app/drivers/awsTask");
-var file=require("../../app/drivers/file");
-var log=require("../../app/drivers/log");
-const STATE_COMPLETED="CREATE_COMPLETE";
-const STATE_UPDATED="UPDATE_COMPLETE";
-const STACK_STATE_ACTIVE="ACTIVE";
-const STACK_INSTANCE_STATUS_OK="CURRENT";
-const ERROR_CODE_NOSTACK=400;
-const ERROR_CODE_NOSTACKSET=404;
-const IAM_ROLE_CFN_STACKSET='teemops-root';
+var AWS = require('aws-sdk');
+var awsTask = require("../../app/drivers/awsTask");
+var file = require("../../app/drivers/file");
+var log = require("../../app/drivers/log");
+const STATE_COMPLETED = "CREATE_COMPLETE";
+const STATE_UPDATED = "UPDATE_COMPLETE";
+const STACK_STATE_ACTIVE = "ACTIVE";
+const STACK_INSTANCE_STATUS_OK = "CURRENT";
+const ERROR_CODE_NOSTACK = 400;
+const ERROR_CODE_NOSTACKSET = 404;
+const IAM_ROLE_CFN_STACKSET = 'teemops-root';
 var config, cfn, templatesURL, snsTopicName, awsAccountId;
 
-function init (appConfig) {
-    config=appConfig;
-    templatesURL=config.get("cfn", "templates");
+function init(appConfig) {
+    config = appConfig;
+    templatesURL = config.get("cfn", "templates");
     var ep = new AWS.Endpoint(config.get("cfn", "endpoint"));
-    cfn = new AWS.CloudFormation({endpoint: ep, region: config.get("default_region")});
-    snsTopicName=config.get("SNS");
-    awsAccountId=config.get("AWSAccountId");
+    cfn = new AWS.CloudFormation({ endpoint: ep, region: config.get("default_region") });
+    snsTopicName = config.get("SNS");
+    awsAccountId = config.get("AWSAccountId");
     return {
         create: createStack,
         delete: deleteStack,
         getOutputs: getStackOutputs,
         creds: useSTSCredentials,
         createSet: createStackSet,
-        checkStackSetExists:checkStackSetExists,
-        createInstances:createStackSetInstances,
-        deleteInstances:deleteStackSetInstances,
-        setRegion:setRegion,
+        checkStackSetExists: checkStackSetExists,
+        createInstances: createStackSetInstances,
+        deleteInstances: deleteStackSetInstances,
+        setRegion: setRegion,
         task: cfnTask
     }
 }
@@ -37,45 +37,45 @@ function init (appConfig) {
  * 
  * @param {*} credentials 
  */
-function useSTSCredentials(region, credentials){
+function useSTSCredentials(region, credentials) {
     AWS.config.update({
-        accessKeyId:credentials.accessKeyId,
-        secretAccessKey:credentials.secretAccessKey,
-        sessionToken:credentials.sessionToken,
-        region:region
+        accessKeyId: credentials.accessKeyId,
+        secretAccessKey: credentials.secretAccessKey,
+        sessionToken: credentials.sessionToken,
+        region: region
     });
-    var ep = new AWS.Endpoint('https://cloudformation.'+region+'.amazonaws.com');
-    cfn = new AWS.CloudFormation({endpoint: ep, region: region});
+    var ep = new AWS.Endpoint('https://cloudformation.' + region + '.amazonaws.com');
+    cfn = new AWS.CloudFormation({ endpoint: ep, region: region });
 }
 
-function setRegion(region){
+function setRegion(region) {
     AWS.config.update({
-        region:region
+        region: region
     });
-    var ep = new AWS.Endpoint('https://cloudformation.'+region+'.amazonaws.com');
-    cfn = new AWS.CloudFormation({endpoint: ep, region: region});
+    var ep = new AWS.Endpoint('https://cloudformation.' + region + '.amazonaws.com');
+    cfn = new AWS.CloudFormation({ endpoint: ep, region: region });
 }
 
-async function cfnTask(task, params=null){
-    try{
+async function cfnTask(task, params = null) {
+    try {
         return await awsTask(cfn, task, params);
-    }catch(e){
+    } catch (e) {
         throw e;
     }
 }
 
-async function waitFor(waitCommand, params){
-    return new Promise(function(resolve, reject){
+async function waitFor(waitCommand, params) {
+    return new Promise(function (resolve, reject) {
         cfn.waitFor(
-            waitCommand, 
-            params, 
-            function(err, data){
-                if(err){
+            waitCommand,
+            params,
+            function (err, data) {
+                if (err) {
                     reject(err);
-                }else{
+                } else {
                     resolve(data);
                 }
-        });
+            });
     });
 }
 
@@ -90,15 +90,15 @@ async function waitFor(waitCommand, params){
  * @param {*} url Is the template a URL or local file?
  * @param {*} notify Whether or not to send an SNS notification back once CFN CREATE is done
  */
-async function createStack(label, templateName, parameters=null, wait=false, url=false, notify=true, update=false){
-    try{
+async function createStack(label, templateName, parameters = null, wait = false, url = false, notify = true, update = false) {
+    try {
 
-        var stackName="teemops-"+label;
-        
-        if(url){
-            
-            const template=templatesURL+templateName+".cfn.yaml";
-            
+        var stackName = "teemops-" + label;
+
+        if (url) {
+
+            const template = templatesURL + templateName + ".cfn.yaml";
+
             var params = {
                 StackName: stackName,
                 TemplateURL: template,
@@ -107,9 +107,9 @@ async function createStack(label, templateName, parameters=null, wait=false, url
                     'CAPABILITY_IAM'
                 ]
             };
-        }else{
-            const templateBody=await file.read("cloudformation/"+templateName+".cfn.yaml");
-        
+        } else {
+            const templateBody = await file.read("cloudformation/" + templateName + ".cfn.yaml");
+
             var params = {
                 StackName: stackName,
                 TemplateBody: templateBody,
@@ -120,32 +120,32 @@ async function createStack(label, templateName, parameters=null, wait=false, url
             };
         }
 
-        var notifyARN='arn:aws:sns:'+cfn.config.region+':'+awsAccountId+':'+snsTopicName;
-        
-        if(notify){
-            params.NotificationARNs=[notifyARN];
+        var notifyARN = 'arn:aws:sns:' + cfn.config.region + ':' + awsAccountId + ':' + snsTopicName;
+
+        if (notify) {
+            params.NotificationARNs = [notifyARN];
         }
-        
+
         var result;
 
-        if(update){
-            result=await cfnTask('updateStack', params);
-        }else{
-            result=await cfnTask('createStack', params);
+        if (update) {
+            result = await cfnTask('updateStack', params);
+        } else {
+            result = await cfnTask('createStack', params);
         }
-        
-        if(wait){
+
+        if (wait) {
             //await sleep(2000);
-            const waitResult=await checkStackStatus(stackName, update);
+            const waitResult = await checkStackStatus(stackName, update);
             return waitResult;
-        }else{
+        } else {
             return result;
         }
-        
-    }catch(e){
-        
-        if(e.code==="AlreadyExistsException"){
-            const waitResult=await checkStackStatus(stackName);
+
+    } catch (e) {
+
+        if (e.code === "AlreadyExistsException") {
+            const waitResult = await checkStackStatus(stackName);
             return waitResult;
         }
 
@@ -160,39 +160,39 @@ async function createStack(label, templateName, parameters=null, wait=false, url
  * @param {*} label 
  * @param {*} wait 
  */
-async function deleteStack(label, wait=false){
-    try{
+async function deleteStack(label, wait = false) {
+    try {
 
-        var stackName="teemops-"+label;
-        
+        var stackName = "teemops-" + label;
+
         var params = {
             StackName: stackName
         };
-        
-        const result=await cfnTask('deleteStack', params);
-        
-        if(wait){
+
+        const result = await cfnTask('deleteStack', params);
+
+        if (wait) {
             //await sleep(2000);
-            const waitResult=await checkStackStatus(stackName);
+            const waitResult = await checkStackStatus(stackName);
             return waitResult;
-        }else{
+        } else {
             return result;
         }
-        
-    }catch(e){
+
+    } catch (e) {
         throw e;
     }
 }
 
-async function createStackSet(label, templateName, parameters=null, url=false){
-    try{
-        var stackSetName="teemops-"+label;
-        const iamRoleAll='arn:aws:iam::'+awsAccountId+':role/'+IAM_ROLE_CFN_STACKSET;
+async function createStackSet(label, templateName, parameters = null, url = false) {
+    try {
+        var stackSetName = "teemops-" + label;
+        const iamRoleAll = 'arn:aws:iam::' + awsAccountId + ':role/' + IAM_ROLE_CFN_STACKSET;
 
-        if(url){
-            
-            const template=templatesURL+templateName+".cfn.yaml";
-            
+        if (url) {
+
+            const template = templatesURL + templateName + ".cfn.yaml";
+
             var params = {
                 StackSetName: stackSetName,
                 TemplateURL: template,
@@ -200,9 +200,9 @@ async function createStackSet(label, templateName, parameters=null, url=false){
                 ExecutionRoleName: IAM_ROLE_CFN_STACKSET,
                 Parameters: getParams(parameters)
             };
-        }else{
-            const templateBody=await file.read("cloudformation/"+templateName+".cfn.yaml");
-        
+        } else {
+            const templateBody = await file.read("cloudformation/" + templateName + ".cfn.yaml");
+
             var params = {
                 StackSetName: stackSetName,
                 TemplateBody: templateBody,
@@ -212,30 +212,30 @@ async function createStackSet(label, templateName, parameters=null, url=false){
             };
         }
 
-        const result=await cfnTask('createStackSet', params);
-        var done=false;
+        const result = await cfnTask('createStackSet', params);
+        var done = false;
 
-        while(!done){
-            const check=await checkStackSetExists(stackSetName);
-            if(check){
-                done=true;
-            }else{
+        while (!done) {
+            const check = await checkStackSetExists(stackSetName);
+            if (check) {
+                done = true;
+            } else {
                 await waiting(5000);
             }
 
         }
 
         return true;
-        
-    }catch(e){
+
+    } catch (e) {
         throw e;
     }
 }
 
-async function createStackSetInstances(label, accounts, regions){
-    
-    try{
-        var stackSetName="teemops-"+label;
+async function createStackSetInstances(label, accounts, regions) {
+
+    try {
+        var stackSetName = "teemops-" + label;
 
         var params = {
             StackSetName: stackSetName,
@@ -245,31 +245,31 @@ async function createStackSetInstances(label, accounts, regions){
                 RegionOrder: regions
             }
         };
-        
-        const result=await cfnTask('createStackInstances', params);
-        if(result.OperationId!=undefined){
-            const firstRegion=regions[0];
-            const firstAccount=accounts[0];
-            const checkFirstRegionHasRunOK=await checkStackInstanceInRegion(stackSetName, firstAccount, firstRegion);
-            if(checkFirstRegionHasRunOK){
+
+        const result = await cfnTask('createStackInstances', params);
+        if (result.OperationId != undefined) {
+            const firstRegion = regions[0];
+            const firstAccount = accounts[0];
+            const checkFirstRegionHasRunOK = await checkStackInstanceInRegion(stackSetName, firstAccount, firstRegion);
+            if (checkFirstRegionHasRunOK) {
                 return true;
-            }else{
+            } else {
                 return false;
             }
-        }else{
+        } else {
             log.out(500, 'Teemops ERROR: createStackSetInstances failed.');
         }
-        
-        
-    }catch(e){
+
+
+    } catch (e) {
         throw e;
     }
 }
 
-async function deleteStackSetInstances(label, accounts, regions){
-    
-    try{
-        var stackSetName="teemops-"+label;
+async function deleteStackSetInstances(label, accounts, regions) {
+
+    try {
+        var stackSetName = "teemops-" + label;
 
         var params = {
             StackSetName: stackSetName,
@@ -277,22 +277,22 @@ async function deleteStackSetInstances(label, accounts, regions){
             Regions: regions,
             RetainStacks: false
         };
-        
-        const result=await cfnTask('deleteStackInstances', params);
-        if(result.OperationId!=undefined){
+
+        const result = await cfnTask('deleteStackInstances', params);
+        if (result.OperationId != undefined) {
             return true;
-        }else{
+        } else {
             log.out(500, 'Teemops ERROR: deleteStackSetInstances failed.', log.LOG_TYPES.ERROR);
         }
-        
-        
-    }catch(e){
-        log.out(500, 'Internal error '+e, log.LOG_TYPES.ERROR);
+
+
+    } catch (e) {
+        log.out(500, 'Internal error ' + e, log.LOG_TYPES.ERROR);
     }
 }
 
-function waiting(ms){
-    return new Promise(resolve=>setTimeout(resolve, ms));
+function waiting(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
@@ -301,30 +301,30 @@ function waiting(ms){
  * @param {*} stackSetName 
  * @param {*} region 
  */
-async function checkStackInstanceInRegion(stackSetName, account, region){
-    var tries, check, result, done=false;
+async function checkStackInstanceInRegion(stackSetName, account, region) {
+    var tries, check, result, done = false;
 
-    while(!done){
+    while (!done) {
         var params = {
             StackSetName: stackSetName,
             StackInstanceAccount: account,
             StackInstanceRegion: region
         };
-        try{
-            result=await cfnTask('describeStackInstance', params);
-            if(result.StackInstance.Status!=undefined){
-                check=(result.StackInstance.Status==STACK_INSTANCE_STATUS_OK);
+        try {
+            result = await cfnTask('describeStackInstance', params);
+            if (result.StackInstance.Status != undefined) {
+                check = (result.StackInstance.Status == STACK_INSTANCE_STATUS_OK);
             }
-        }catch(e){
+        } catch (e) {
             log.out(400, e, log.LOG_TYPES.ERROR);
         }
-        if(tries==5){
+        if (tries == 5) {
             log.out(504, 'Operation checkStackInstanceInRegion timed out after 5 attempts', log.LOG_TYPES.ERROR);
         }
         tries++;
-        if(check){
-            done=true;
-        }else{
+        if (check) {
+            done = true;
+        } else {
             await waiting(10000);
         }
 
@@ -332,19 +332,19 @@ async function checkStackInstanceInRegion(stackSetName, account, region){
     return true;
 }
 
-async function checkStackSetExists(stackSetName){
-    var params={
+async function checkStackSetExists(stackSetName) {
+    var params = {
         StackSetName: stackSetName
     }
-    try{
-        const describeStackSet= await cfnTask('describeStackSet', params);
-        if(describeStackSet.StackSet!=undefined){
-            return (describeStackSet.StackSet.Status==STACK_STATE_ACTIVE);
-        }else{
+    try {
+        const describeStackSet = await cfnTask('describeStackSet', params);
+        if (describeStackSet.StackSet != undefined) {
+            return (describeStackSet.StackSet.Status == STACK_STATE_ACTIVE);
+        } else {
             return null;
         }
-    }catch(e){
-        if(e.statusCode==ERROR_CODE_NOSTACKSET){
+    } catch (e) {
+        if (e.statusCode == ERROR_CODE_NOSTACKSET) {
             return null;
         }
         throw e;
@@ -364,54 +364,54 @@ async function checkStackSetExists(stackSetName){
  *  ],...
  * }
  */
-async function getStackOutputs(stackName){
+async function getStackOutputs(stackName) {
     var params = {
-        StackName: 'teemops-'+stackName
+        StackName: 'teemops-' + stackName
     };
-    try{
-        const describeStacks= await cfnTask('describeStacks', params);
-        if(describeStacks.Stacks.length!=0){
+    try {
+        const describeStacks = await cfnTask('describeStacks', params);
+        if (describeStacks.Stacks.length != 0) {
             return describeStacks.Stacks[0].Outputs;
-        }else{
+        } else {
             return null;
         }
-    }catch(e){
-        if(e.statusCode==ERROR_CODE_NOSTACK){
+    } catch (e) {
+        if (e.statusCode == ERROR_CODE_NOSTACK) {
             return null;
         }
         throw e;
     }
-    
+
 }
 
-async function checkStackStatus(stackName, update=false){
-    var params={
+async function checkStackStatus(stackName, update = false) {
+    var params = {
         StackName: stackName
     }
-    try{
-        if(update){
-            const wait=await waitFor('stackUpdateComplete', params);
-            if(wait.StackStatus==STATE_UPDATED){
-                if(wait.Stacks[0].Outputs[0].OutputKey=='BucketName'){
+    try {
+        if (update) {
+            const wait = await waitFor('stackUpdateComplete', params);
+            if (wait.StackStatus == STATE_UPDATED) {
+                if (wait.Stacks[0].Outputs[0].OutputKey == 'BucketName') {
                     return wait.Stacks[0].Outputs[0].OutputValue;
                 }
             }
-        }else{
-            const wait=await waitFor('stackCreateComplete', params);
-            if(wait.StackStatus==STATE_COMPLETED){
-                if(wait.Stacks[0].Outputs[0].OutputKey=='BucketName'){
+        } else {
+            const wait = await waitFor('stackCreateComplete', params);
+            if (wait.StackStatus == STATE_COMPLETED) {
+                if (wait.Stacks[0].Outputs[0].OutputKey == 'BucketName') {
                     return wait.Stacks[0].Outputs[0].OutputValue;
                 }
             }
         }
-        
-    }catch(e){
-        if(e.code=="ResourceNotReady"){
+
+    } catch (e) {
+        if (e.code == "ResourceNotReady") {
             return true;
         }
         throw e;
     }
-    
+
 }
 /**
  * Converts an object to an Array of CloudFormation compatible
@@ -421,14 +421,14 @@ async function checkStackStatus(stackName, update=false){
  * 
  * @param {*} params just an object
  */
-function getParams(params){
-    var cfnParamsArray=[];
-    if(params==null){
+function getParams(params) {
+    var cfnParamsArray = [];
+    if (params == null) {
         return cfnParamsArray;
     }
-    Object.keys(params).forEach(function(value, index, array){
-        try{
-            if(params[value]!=null){
+    Object.keys(params).forEach(function (value, index, array) {
+        try {
+            if (params[value] != null) {
                 cfnParamsArray.push({
                     ParameterKey: value,
                     ParameterValue: params[value].toString()
@@ -441,18 +441,18 @@ function getParams(params){
             //     }
             //     throw error;
             // }
-            
-        }catch(e){
+
+        } catch (e) {
             throw e;
         }
     });
     return cfnParamsArray;
 }
 
-function sleep(ms){
-    return new Promise(resolve=>{
-        setTimeout(resolve,ms)
+function sleep(ms) {
+    return new Promise(resolve => {
+        setTimeout(resolve, ms)
     })
 }
 
-module.exports=init;
+module.exports = init;

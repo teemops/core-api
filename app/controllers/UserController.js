@@ -5,6 +5,7 @@ var mysql = require("../../app/drivers/mysql.js");
 var mail = require("../../app/drivers/mail.js");
 var configService = require("../../app/drivers/configDriver.js");
 var jwtController = require("../../app/controllers/JWTController.js");
+var keyController = require("../../app/controllers/KeyController");
 var log = require('../drivers/log.js');
 
 var util = require('util');
@@ -20,13 +21,21 @@ var password = require('../../app/auth/password')
 var pass = password(config)
 
 myEmail.init(config);
+var key = keyController(config);
 
 module.exports = function () {
     return {
         init: function init() {
 
         },
-
+        listKeys: async function listKeys(userId) {
+            const result = await key.list(userId);
+            return result;
+        },
+        getKey: async function getKey(userId, region, awsAccountId) {
+            const result = await key.get(userId, region, awsAccountId);
+            return result;
+        },
         getUserByID: function getUserByID(id, cb) {
 
             var sql = "CALL sp_getUserById(?)";
@@ -173,10 +182,10 @@ module.exports = function () {
                 myEmail.sendEmail(
                     data.email, subject, message,
                     function (err, messageResult) {
-                        if (err) cb(err, null);
+                        if (err) throw err;
 
                         if (messageResult != null) {
-                            cb(null, results);
+                            return results;
                         }
                     }
                 );

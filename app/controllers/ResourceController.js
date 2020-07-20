@@ -1,42 +1,42 @@
 
 var config, cfn, sts, s3;
 var log = require('../drivers/log.js');
-var cfnDriver=require("../../app/drivers/cfn");
-var stsDriver=require("../../app/drivers/sts");
-var ec2=require("../../app/drivers/ec2");
-var at=require("../../app/drivers/awsTask");
-var price=require("../../app/drivers/pricing");
+var cfnDriver = require("../../app/drivers/cfn");
+var stsDriver = require("../../app/drivers/sts");
+var ec2 = require("../../app/drivers/ec2");
+var at = require("../../app/drivers/awsTask");
+var price = require("../../app/drivers/pricing");
 var appQ = require("../../app/drivers/sqs.js");
 var mysql = require("../../app/drivers/mysql.js");
 var jmespath = require('jmespath');
-var mydb= mysql();
-var jobQ=appQ();
-var defaultQs=jobQ.getQs();
+var mydb = mysql();
+var jobQ = appQ();
+var defaultQs = jobQ.getQs();
 
 /**
  * @author: Ben Fellows <ben@teemops.com>
  * @description: Query resources in AWS accounts
  * @usage: Query Resources in customers child AWS Accounts
  */
-module.exports=function(){
+module.exports = function () {
     return {
-        init:  function init (appConfig) {  
-            config=appConfig;
-            cfn=cfnDriver(appConfig);
-            sts=stsDriver(appConfig);
+        init: function init(appConfig) {
+            config = appConfig;
+            cfn = cfnDriver(appConfig);
+            sts = stsDriver(appConfig);
             mydb.init();
         },
-        describeInstance: async function describe(appId, InstanceId){
-            var sql="CALL sp_getSTSCreds(?)";
+        describeInstance: async function describe(appId, InstanceId) {
+            var sql = "CALL sp_getSTSCreds(?)";
             var params = [appId];
 
-            try{
-                const sqldata=await mydb.getRow(sql, params);
-                
-                var stsParams={
+            try {
+                const sqldata = await mydb.getRow(sql, params);
+
+                var stsParams = {
                     RoleArn: JSON.parse(sqldata.authData).arn
                 }
-                var creds=await sts.assume(stsParams);
+                var creds = await sts.assume(stsParams);
                 //set credentials
                 var event = {
                     task: 'describeInstances',
@@ -48,14 +48,14 @@ module.exports=function(){
                     region: sqldata.region
                 };
 
-                var result=await ec2(event, creds);
-                var instances=jmespath.search(result, "Reservations[].Instances[]");
-                
+                var result = await ec2(event, creds);
+                var instances = jmespath.search(result, "Reservations[].Instances[]");
+
                 return instances;
-            }catch(e){
+            } catch (e) {
                 throw e;
             }
-            
+
         },
         /**
          * Get App ID From Meta Data search and AWS Account lookup
@@ -63,40 +63,40 @@ module.exports=function(){
          * @param {*} metaSearch 
          * @param {*} AWSAccountId 
          */
-        getAppIdFromMeta: async function(metaSearch, AWSAccountId){
-            var sql="CALL sp_getAppIdFromMeta(?,?)";
-            var params=[metaSearch, AWSAccountId];
-            try{
-                const sqldata=await mydb.getRow(sql, params);
-                if(sqldata!=undefined){
+        getAppIdFromMeta: async function (metaSearch, AWSAccountId) {
+            var sql = "CALL sp_getAppIdFromMeta(?,?)";
+            var params = [metaSearch, AWSAccountId];
+            try {
+                const sqldata = await mydb.getRow(sql, params);
+                if (sqldata != undefined) {
                     return sqldata.id;
-                }else{
+                } else {
                     return null;
                 }
-                
-            }catch(e){
+
+            } catch (e) {
                 throw e;
             }
         },
-        getMetaData: async function(appId){
-            var sql="CALL sp_getMetaData(?)";
-            var params=[appId];
-            try{
-                const sqldata=await mydb.getRow(sql, params);
-                if(sqldata!=null){
-                    if(sqldata.metaData!=undefined){
+        getMetaData: async function (appId) {
+            var sql = "CALL sp_getMetaData(?)";
+            var params = [appId];
+            try {
+                const sqldata = await mydb.getRow(sql, params);
+                if (sqldata != null) {
+                    if (sqldata.metaData != undefined) {
                         return sqldata.metaData;
-                    }else{
+                    } else {
                         throw {
                             code: 'NotFound'
                         };
                     }
-                }else{
+                } else {
                     throw {
                         code: 'NotFound'
                     };
                 }
-            }catch(e){
+            } catch (e) {
                 if (e.code != null) {
                     switch (e.code) {
                         case 'NotFound':
@@ -110,23 +110,23 @@ module.exports=function(){
                 }
             }
         },
-        stopApp: async function stopApp(authUserid, appId){
-            
-            try{
-                var setupData=await this.setupTask(authUserid, appId);
-                var sqldata=setupData.data;
-                var creds=setupData.creds;
+        stopApp: async function stopApp(authUserid, appId) {
 
-                var metaData=JSON.parse(sqldata.metaData);
-                var instanceIds=jmespath.search(metaData, "Instances[].InstanceId");
-                if(instanceIds==null){
+            try {
+                var setupData = await this.setupTask(authUserid, appId);
+                var sqldata = setupData.data;
+                var creds = setupData.creds;
+
+                var metaData = JSON.parse(sqldata.metaData);
+                var instanceIds = jmespath.search(metaData, "Instances[].InstanceId");
+                if (instanceIds == null) {
                     //if meta data not available in databases for some reason, now try and get the instanceIds from the describe ec2 instances
-                    var describeEvent={
+                    var describeEvent = {
                         task: 'describeInstances',
                         params: {
                             Filters: [
                                 {
-                                    Name: "tag:topsid", 
+                                    Name: "tag:topsid",
                                     Values: [
                                         sqldata.appId.toString()
                                     ]
@@ -135,11 +135,11 @@ module.exports=function(){
                         },
                         region: sqldata.region
                     };
-                    var describeResult=await ec2(describeEvent, creds);
-                    if(describeResult!=null){
-                        instanceIds=jmespath.search(describeResult, "Reservations[].Instances[].InstanceId");
+                    var describeResult = await ec2(describeEvent, creds);
+                    if (describeResult != null) {
+                        instanceIds = jmespath.search(describeResult, "Reservations[].Instances[].InstanceId");
                     }
-                    
+
                 }
                 var event = {
                     task: 'stopInstances',
@@ -149,25 +149,25 @@ module.exports=function(){
                     region: sqldata.region
                 };
 
-                var result=await ec2(event, creds);
-                if(result.StoppingInstances!=undefined){
+                var result = await ec2(event, creds);
+                if (result.StoppingInstances != undefined) {
                     return true;
-                }else{
+                } else {
                     return false;
                 }
-            }catch(e){
+            } catch (e) {
                 throw e;
             }
 
         },
-        startApp: async function startApp(authUserid, appId){
-            try{
-                var setupData=await this.setupTask(authUserid, appId);
-                var sqldata=setupData.data;
-                var creds=setupData.creds;
+        startApp: async function startApp(authUserid, appId) {
+            try {
+                var setupData = await this.setupTask(authUserid, appId);
+                var sqldata = setupData.data;
+                var creds = setupData.creds;
 
-                var metaData=JSON.parse(sqldata.metaData);
-                var instanceIds=jmespath.search(metaData, "Instances[].InstanceId");
+                var metaData = JSON.parse(sqldata.metaData);
+                var instanceIds = jmespath.search(metaData, "Instances[].InstanceId");
 
                 var event = {
                     task: 'startInstances',
@@ -177,13 +177,13 @@ module.exports=function(){
                     region: sqldata.region
                 };
 
-                var result=await ec2(event, creds);
-                if(result.StartingInstances!=undefined){
+                var result = await ec2(event, creds);
+                if (result.StartingInstances != undefined) {
                     return true;
-                }else{
+                } else {
                     return false;
                 }
-            }catch(e){
+            } catch (e) {
                 throw e;
             }
         },
@@ -191,52 +191,52 @@ module.exports=function(){
          * Archives an app as an AMI in the users account
          * 
          *  */
-        archiveApp: async function archiveApp(authUserid, appId){
-            try{
-                var setupData=await this.setupTask(authUserid, appId);
-                var sqldata=setupData.data;
-                var creds=setupData.creds;
+        archiveApp: async function archiveApp(authUserid, appId) {
+            try {
+                var setupData = await this.setupTask(authUserid, appId);
+                var sqldata = setupData.data;
+                var creds = setupData.creds;
 
-                var metaData=JSON.parse(sqldata.metaData);
-                var instanceIds=jmespath.search(metaData, "Instances[].InstanceId");
+                var metaData = JSON.parse(sqldata.metaData);
+                var instanceIds = jmespath.search(metaData, "Instances[].InstanceId");
                 //create an AMI of the first instance Only
                 var event = {
                     task: 'createImage',
                     params: {
                         InstanceId: instanceIds[0],
                         Description: "Generated by Teem Ops",
-                        Name: "teemops/archives/topsid/"+appId.toString()
+                        Name: "teemops/archives/topsid/" + appId.toString()
                     },
                     region: sqldata.region
                 };
 
-                var result=await ec2(event, creds);
-                if(result.ImageId!=undefined){
+                var result = await ec2(event, creds);
+                if (result.ImageId != undefined) {
                     return true;
-                }else{
+                } else {
                     return false;
                 }
-            }catch(e){
+            } catch (e) {
                 throw e;
             }
         },
-        setupTask: async function setup(authUserid, appId){
-            var sql="CALL sp_getAppByUserID(?,?)";
-            var params = [authUserid,appId];
+        setupTask: async function setup(authUserid, appId) {
+            var sql = "CALL sp_getAppByUserID(?,?)";
+            var params = [authUserid, appId];
 
-            try{
-                const sqldata=await mydb.getRow(sql, params);
-                
-                var stsParams={
+            try {
+                const sqldata = await mydb.getRow(sql, params);
+
+                var stsParams = {
                     RoleArn: JSON.parse(sqldata.authData).arn
                 }
-                var creds=await sts.assume(stsParams);
+                var creds = await sts.assume(stsParams);
 
                 return {
                     data: sqldata,
                     creds: creds
                 }
-            }catch(e){
+            } catch (e) {
                 throw e;
             }
         },
@@ -254,16 +254,16 @@ module.exports=function(){
          * @param {*} task 
          * @param {*} params 
          */
-        ec2Task: async function(authUserid, AWSAccountId, task, params, region){
-            var sql='CALL sp_getSTSCredsUserAccount(?, ?)';
-            var sqlParams=[authUserid, AWSAccountId];
-            try{
-                const sqldata=await mydb.getRow(sql, sqlParams);
-                
-                var stsParams={
+        ec2Task: async function (authUserid, AWSAccountId, task, params, region) {
+            var sql = 'CALL sp_getSTSCredsUserAccount(?, ?)';
+            var sqlParams = [authUserid, AWSAccountId];
+            try {
+                const sqldata = await mydb.getRow(sql, sqlParams);
+
+                var stsParams = {
                     RoleArn: JSON.parse(sqldata.authData).arn
                 }
-                var creds=await sts.assume(stsParams);
+                var creds = await sts.assume(stsParams);
                 //set credentials
                 var event = {
                     task: task,
@@ -271,9 +271,9 @@ module.exports=function(){
                     region: region
                 };
 
-                var result=await ec2(event, creds);
+                var result = await ec2(event, creds);
                 return result;
-            }catch(e){
+            } catch (e) {
                 throw e;
             }
 
@@ -292,51 +292,51 @@ module.exports=function(){
          * @param {*} task 
          * @param {*} params 
          */
-        cfnTask: async function(authUserid, AWSAccountId, task, params, region){
-            var sql='CALL sp_getSTSCredsUserAccount(?, ?)';
-            var sqlParams=[authUserid, AWSAccountId];
-            try{
-                const sqldata=await mydb.getRow(sql, sqlParams);
-                
-                var stsParams={
+        cfnTask: async function (authUserid, AWSAccountId, task, params, region) {
+            var sql = 'CALL sp_getSTSCredsUserAccount(?, ?)';
+            var sqlParams = [authUserid, AWSAccountId];
+            try {
+                const sqldata = await mydb.getRow(sql, sqlParams);
+
+                var stsParams = {
                     RoleArn: JSON.parse(sqldata.authData).arn
                 }
-                var creds=await sts.assume(stsParams);
+                var creds = await sts.assume(stsParams);
                 //set credentials
-                cfn.useSTSCredentials(region,creds);
-                var result=await cfn.task(task, params);
+                cfn.useSTSCredentials(region, creds);
+                var result = await cfn.task(task, params);
                 return result;
-            }catch(e){
+            } catch (e) {
                 throw e;
             }
 
         },
-        genericTask: async function(authUserid, AWSAccountId, className, task, params, region){
-            var sql='CALL sp_getSTSCredsUserAccount(?, ?)';
-            var sqlParams=[authUserid, AWSAccountId];
-            try{
-                const sqldata=await mydb.getRow(sql, sqlParams);
-                
-                var stsParams={
+        genericTask: async function (authUserid, AWSAccountId, className, task, params, region) {
+            var sql = 'CALL sp_getSTSCredsUserAccount(?, ?)';
+            var sqlParams = [authUserid, AWSAccountId];
+            try {
+                const sqldata = await mydb.getRow(sql, sqlParams);
+
+                var stsParams = {
                     RoleArn: JSON.parse(sqldata.authData).arn
                 }
-                var creds=await sts.assume(stsParams);
+                var creds = await sts.assume(stsParams);
                 //set client
-                var client=at.client(region, creds, className);
+                var client = at.client(region, creds, className);
 
-                var task=await at(client, 'listCertificates', params);
+                var task = await at(client, task, params);
                 return task;
-            }catch(e){
+            } catch (e) {
                 throw e;
             }
 
         },
-        priceTask: async function(authUserid, AWSAccountId, task, params, region){
+        priceTask: async function (authUserid, AWSAccountId, task, params, region) {
             // var sql='CALL sp_getSTSCredsUserAccount(?, ?)';
             // var sqlParams=[authUserid, AWSAccountId];
-            try{
+            try {
                 // const sqldata=await mydb.getRow(sql, sqlParams);
-                
+
                 // var stsParams={
                 //     RoleArn: JSON.parse(sqldata.authData).arn
                 // }
@@ -348,9 +348,9 @@ module.exports=function(){
                     region: 'ap-south-1'
                 };
 
-                var result=await price(event);
+                var result = await price(event);
                 return result;
-            }catch(e){
+            } catch (e) {
                 throw e;
             }
 

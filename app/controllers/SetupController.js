@@ -167,7 +167,7 @@ async function createSNSTopicSingle(region) {
  */
 async function createKeyStore() {
     try {
-        var outputResults = await cfn.getOutputs('teemops-keystore');
+        var outputResults = await cfn.getOutputs('keystore');
         var result;
         if (outputResults != null && outputResults[0].OutputKey == 'BucketName') {
             result = outputResults[0].OutputValue;

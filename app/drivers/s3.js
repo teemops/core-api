@@ -1,23 +1,24 @@
-var AWS    = require('aws-sdk'); 
+var AWS = require('aws-sdk');
 // Check if environment supports native promises
 if (typeof Promise === 'undefined') {
     AWS.config.setPromisesDependency(require('bluebird'));
-}  
+}
 var config, Buckets, s3, appPath;
-var awsTask=require("../../app/drivers/awsTask");
+var awsTask = require("../../app/drivers/awsTask");
 
-module.exports=function(appConfig){ 
-    config=appConfig;
-    Buckets={meta: config.get("s3", "app_bucket"), main: "teemops"};
-    s3 = new AWS.S3({region: config.get("s3meta", "region")});
-    appPath=config.get("s3", "app_path");
+module.exports = function (appConfig) {
+    config = appConfig;
+    Buckets = { meta: config.get("s3", "app_bucket"), main: "teemops" };
+    s3 = new AWS.S3({ region: config.get("s3meta", "region") });
+    appPath = config.get("s3", "app_path");
 
-    return { 
-        getBuckets:  getBuckets,
+    return {
+        getBuckets: getBuckets,
         readitem: readitem,
         save: saveItem,
         task: s3Task,
-        read: readItemAsync
+        read: readItemAsync,
+        list: listObjects
     }
 }
 
@@ -26,7 +27,7 @@ module.exports=function(appConfig){
  * @description: Returns all names of buckets as object
  * @returns: object of bucket names
  */
-function getBuckets () {
+function getBuckets() {
     return Buckets;
 }
 
@@ -35,70 +36,88 @@ function getBuckets () {
  * @description: Reads an item in S3
  * @returns: url or err
  */
-async function readitem(oName, bucketName, callback){
-            
-    try{
+async function readitem(oName, bucketName, callback) {
+
+    try {
         var params = {
             Bucket: bucketName,
-            Key: appPath+oName
+            Key: appPath + oName
         };
         console.log(bucketName);
-        console.log(appPath+oName);
-        s3.getObject(params, function(err, data) {
-            if (err){
+        console.log(appPath + oName);
+        s3.getObject(params, function (err, data) {
+            if (err) {
                 callback(err, null);
             }
-            else{
+            else {
                 callback(null, data);
             }         // successful response
         });
-    }catch(e){
+    } catch (e) {
         callback(err, null);
-    }finally{
+    } finally {
 
     }
 
 }
 
-async function s3Task(task, params=null){
-    try{
+async function s3Task(task, params = null) {
+    try {
         return await awsTask(s3, task, params);
-    }catch(e){
+    } catch (e) {
         throw e;
     }
 }
 
-async function saveItem(oName, bucketName, body){
-    try{
+async function saveItem(oName, bucketName, body) {
+    try {
         var params = {
             Body: body,
             Bucket: bucketName,
             Key: oName
         };
-        const result=await s3Task('putObject', params);
-        if(result!=null){
+        const result = await s3Task('putObject', params);
+        if (result != null) {
             return true;
-        }else{
+        } else {
             return false;
         }
-    }catch(e){
+    } catch (e) {
         throw e;
     }
 }
 
-async function readItemAsync(oName, bucketName){
-    try{
+async function readItemAsync(oName, bucketName) {
+    try {
         var params = {
             Bucket: bucketName,
             Key: oName
         };
-        const result=await s3Task('getObject', params);
-        if(result!=null){
+        const result = await s3Task('getObject', params);
+        if (result != null) {
             return result.Body;
-        }else{
+        } else {
             return null;
         }
-    }catch(e){
+    } catch (e) {
+        throw e;
+    }
+}
+
+async function listObjects(prefix, bucketName) {
+    try {
+        var params = {
+            Bucket: bucketName,
+            Delimiter: '',
+            Prefix: prefix + '/'
+        };
+        const result = await s3Task('listObjects', params);
+        if (result != null) {
+            return result;
+        } else {
+            return null;
+        }
+    } catch (e) {
         throw e;
     }
 }

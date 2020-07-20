@@ -65,6 +65,88 @@ router.get('/check/:user?', function (req, res) {
 });
 
 /**
+ * @author: Ben Fellows
+ * @description: get keys for userid
+ * @usage: request header needs to include userid and auth token
+ * GET /<api_base>/users/:id
+ */
+router.get('/keys', auth, async function (req, res) {
+    try {
+        var result = await myUser.listKeys(req.auth_userid)
+        if (result != null) {
+            res.json({ data: result });
+        } else {
+            res.json({ error: 'Key returned no results' })
+        }
+
+    } catch (e) {
+        res.json({ error: "Couldn't get key" });
+        console.log(e);
+    }
+});
+
+/**
+ * @author: Ben Fellows
+ * @description: Download a specific key
+ * @usage: request header needs to include userid and auth token
+ * GET /<api_base>/users/key/:accountid/:region
+ */
+router.get('/key/:accountid/:region', auth, async function (req, res) {
+    const fileName = `${req.params.accountid}-${req.params.region}-teemops-${req.auth_userid}.pem`
+    try {
+        var result = await myUser.getKey(req.auth_userid, req.params.region, req.params.accountid)
+        if (result != null) {
+
+            res.setHeader('Content-Length', result.length);
+            res.setHeader('Content-disposition', `attachment; filename=${fileName}`);
+            res.write(result, 'binary');
+            res.end();
+
+        } else {
+            res.json({ error: 'Key returned no results' })
+        }
+
+    } catch (e) {
+        res.json({ error: "Couldn't get key" });
+        console.log(e);
+    }
+
+});
+
+/**
+ * @author: Ben Fellows
+ * @description: Download a specific key using POST
+ * @usage: request header needs to include auth token
+ * POST /<api_base>/users/key
+ * {
+ *  awsAccountId: 1234567891012,
+ *  region: ap-southeast-2
+ * 
+ * }
+ */
+router.post('/key', auth, async function (req, res) {
+    const fileName = `${req.body.awsAccountId}-${req.body.region}-teemops-${req.auth_userid}.pem`
+    try {
+        var result = await myUser.getKey(req.auth_userid, req.body.region, req.body.awsAccountId)
+        if (result != null) {
+
+            res.setHeader('Content-Length', result.length);
+            res.setHeader('Content-disposition', `attachment; filename=${fileName}`);
+            res.write(result, 'binary');
+            res.end();
+
+        } else {
+            res.json({ error: 'Key returned no results' })
+        }
+
+    } catch (e) {
+        res.json({ error: "Couldn't get key" });
+        console.log(e);
+    }
+
+});
+
+/**
  * @author: Sarah Ruane
  * @description: retrieve user by id (authenticated)
  * @usage: request header needs to include userid and auth token
