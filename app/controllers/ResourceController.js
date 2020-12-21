@@ -13,6 +13,7 @@ var mydb = mysql();
 var jobQ = appQ();
 var defaultQs = jobQ.getQs();
 
+
 /**
  * @author: Ben Fellows <ben@teemops.com>
  * @description: Query resources in AWS accounts

@@ -227,6 +227,30 @@ module.exports = function () {
             if (data.hasPublicIp === undefined) {
                 data.hasPublicIp = 'true';
             }
+            if (data.configData.cloud.publicIP === undefined) {
+                data.hasPublicIp = 'true';
+                data.hasElasticIp = 'false';
+            } else {
+                //Public IP or not?
+                switch (data.configData.cloud.publicIP) {
+                    case 1:
+                        data.hasPublicIp = 'false'
+                        data.hasElasticIp = 'false'
+                        break;
+                    case 2:
+                        data.hasPublicIp = 'true'
+                        data.hasElasticIp = 'false'
+                        break;
+                    case 3:
+                        data.hasPublicIp = 'true'
+                        data.hasElasticIp = 'true'
+                        break;
+                    default:
+                        data.hasPublicIp = 'true'
+                        data.hasElasticIp = 'false'
+
+                }
+            }
             return {
                 AMI: data.aimageid,
                 InstanceType: data.appInstanceType,
@@ -237,7 +261,8 @@ module.exports = function () {
                 KeyPair: data.keyPair,
                 Subnet: data.appSubnet,
                 SecurityGroup: data.appSecurityGroup,
-                HasPublicIp: data.hasPublicIp
+                HasPublicIp: data.hasPublicIp,
+                HasElasticIp: data.hasElasticIp
             }
         },
         /**
