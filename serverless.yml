@@ -1,0 +1,33 @@
+# Teem Ops Cloud API Services
+
+service: cloudAPI
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  region: us-west-2
+  stage: ${opt:stage, self:custom.defaultStage}
+  memorySize: 256
+  
+functions:
+  proxy:
+    handler: proxy.handler
+    description: Handles listing of an AWS account's VPCs by given region
+    timeout: 6
+    memorySize: 512
+    events:
+      - http:
+          path: *
+          method: post
+          cors:
+            origins:
+              - '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - x-access-token
+              - Access-Control-Allow-Origin:'*'
+            allowCredentials: true

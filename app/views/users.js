@@ -42,6 +42,8 @@ router.put('/', async function (req, res) {
         res.json({ userId });
     } catch (e) {
         res.status(e.status).send({ error: e });
+    } finally {
+        res.status('Unknown error')
     }
 
 });

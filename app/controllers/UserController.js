@@ -163,7 +163,7 @@ module.exports = function () {
                 if (e.code != null) {
                     switch (e.code) {
                         case 'ER_DUP_ENTRY':
-                            throw log.EXCEPTIONS.DUPLICATE;
+                            throw log.EXCEPTIONS.duplicate;
                             break;
                         default:
                             throw e;
