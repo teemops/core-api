@@ -19,7 +19,8 @@
             "type": "node",
             "request": "launch",
             "name": "Teemops Service",
-            "program": "${workspaceFolder}/app/service/status.js"
+            "program": "${workspaceFolder}/app/service/status.js",
+
         },
         {
             "type": "node",

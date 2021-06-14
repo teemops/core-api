@@ -36,6 +36,20 @@ module.exports = function () {
             const result = await key.get(userId, region, awsAccountId);
             return result;
         },
+        getUserByExternalId: async function (externalId) {
+            try {
+                var sql = "SELECT userid FROM user WHERE externalId=?";
+                var params = [externalId];
+                const result = await mydb.queryPromise(sql, params);
+                if (result.length > 0) {
+                    return result[0].userid;
+                } else {
+                    throw 'No user found';
+                }
+            } catch (e) {
+                throw e;
+            }
+        },
         getUserByID: function getUserByID(id, cb) {
 
             var sql = "CALL sp_getUserById(?)";

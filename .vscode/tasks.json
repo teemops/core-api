@@ -7,6 +7,13 @@
             "type": "npm",
             "script": "start",
             "problemMatcher": []
+        },
+        {
+            "type": "npm",
+            "script": "switchprod",
+            "problemMatcher": [],
+            "label": "npm: switchprod",
+            "detail": "aws-vault exec teemops"
         }
     ]
 }

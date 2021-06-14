@@ -12,11 +12,14 @@
     "pricing-test": "MODE=test node app/service/pricing.js",
     "pricing-prod": "MODE=prod node app/service/pricing.js",
     "build-images": "MODE=dev node app/service/buildimages.js",
-    "tsc": "tsc"
+    "tsc": "tsc",
+    "switchprod": "aws-vault exec teemops"
   },
   "dependencies": {
     "aws-sdk": "^2.387.0",
+    "axios": "^0.21.1",
     "body-parser": "^1.18.3",
+    "cfn-response": "^1.0.1",
     "config-json": "^1.0.0",
     "emailjs": "",
     "express": ">=4.5.0",

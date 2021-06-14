@@ -27,20 +27,27 @@ async function init(appConfig) {
     awsAccountId = config.get("AWSAccountId");
 
     //check Message Queues are setup
-    var startQ = await createJobQ();
-    if (startQ) {
-        console.log("New Teemops Main SQS Created");
+    try {
+        var startQ = await createJobQ();
+        if (startQ) {
+            console.log("New Teemops Main SQS Created");
+        }
+        var createKey = await createKMSKey();
+        if (createKey) {
+            console.log("Teemops KMS init");
+        }
+
+        var keyStore = await createKeyStore();
+
+        var createTopic = await createSNSTopic();
+
+        return startQ && createKey && keyStore && createTopic;
+    } catch (e) {
+        throw e
     }
-    var createKey = await createKMSKey();
-    if (createKey) {
-        console.log("Teemops KMS init");
-    }
 
-    var keyStore = await createKeyStore();
 
-    var createTopic = await createSNSTopic();
 
-    return startQ && createKey && keyStore && createTopic;
 }
 
 /**
